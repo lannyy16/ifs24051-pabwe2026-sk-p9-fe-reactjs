@@ -455,7 +455,7 @@ pipeline {
 
                             echo ""
                             echo "=========================================="
-                            echo "       G£‡ DEPLOYMENT SUCCESS"
+                            echo "       ‚úÖ DEPLOYMENT SUCCESS"
                             echo "=========================================="
 
                             break
@@ -469,7 +469,7 @@ pipeline {
 
                             echo ""
                             echo "=========================================="
-                            echo "       G•Ó DEPLOYMENT FAILED"
+                            echo "       ‚ùå DEPLOYMENT FAILED"
                             echo "=========================================="
 
                             def deploymentLog =
@@ -517,16 +517,16 @@ pipeline {
 
         success {
             echo "=========================================="
-            echo "       G£‡ PIPELINE SUCCESS"
+            echo "       ‚úÖ PIPELINE SUCCESS"
             echo "=========================================="
             echo "Result: ${currentBuild.currentResult}"
-            echo "=ÉÙ™ Artifact: ${env.ARTIFACT_URL ?: '(not published)'}"
-            echo "=É‹« Website berhasil dideploy."
+            echo "üì¶ Artifact: ${env.ARTIFACT_URL ?: '(not published)'}"
+            echo "üöÄ Website berhasil dideploy."
         }
 
         failure {
             echo "=========================================="
-            echo "       G•Ó PIPELINE FAILED"
+            echo "       ‚ùå PIPELINE FAILED"
             echo "=========================================="
             echo "Result: ${currentBuild.currentResult}"
             echo "Periksa log stage yang merah / Console Output untuk penyebab gagal."
@@ -534,7 +534,7 @@ pipeline {
 
         unstable {
             echo "=========================================="
-            echo "       G‹·n+≈ PIPELINE UNSTABLE"
+            echo "       ‚ö†Ô∏è PIPELINE UNSTABLE"
             echo "=========================================="
             echo "Result: ${currentBuild.currentResult}"
         }
