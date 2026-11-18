@@ -33,12 +33,13 @@ pipeline {
         stage('Install Dependencies') {
             agent {
                 docker {
-                    image 'node:22-alpine'
+                    image 'golang:1.27-alpine'
                     reuseNode true
                     args '''
                         -e HOME=/tmp
-                        -e npm_config_cache=/npm-cache
-                        -v cicd-npm-cache:/npm-cache
+                        -e GOCACHE=/go-cache/build
+                        -e GOMODCACHE=/go-cache/mod
+                        -v cicd-go-cache:/go-cache
                     '''
                 }
             }
@@ -47,14 +48,21 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "=== Node Runtime ==="
-                    node --version
-                    npm --version
+                    echo "=== Go Runtime ==="
+                    go version
 
-                    echo "=== Installing Dependencies (npm ci) ==="
-                    npm ci --no-audit --no-fund
+                    if [ ! -f /go-cache/mod/.stamp ] \
+                        || [ go.mod -nt /go-cache/mod/.stamp ] \
+                        || [ go.sum -nt /go-cache/mod/.stamp ]; then
+                        echo "=== Downloading Go Modules ==="
+                        go mod download
+                        go mod verify
+                        touch /go-cache/mod/.stamp
+                    else
+                        echo "=== go.mod/go.sum unchanged, using cached modules ==="
+                    fi
 
-                    echo "=== Node Dependencies Installed ==="
+                    echo "=== Go Dependencies Installed ==="
                 '''
             }
         }
@@ -65,12 +73,13 @@ pipeline {
         stage('Test') {
             agent {
                 docker {
-                    image 'node:22-alpine'
+                    image 'golang:1.27-alpine'
                     reuseNode true
                     args '''
                         -e HOME=/tmp
-                        -e npm_config_cache=/npm-cache
-                        -v cicd-npm-cache:/npm-cache
+                        -e GOCACHE=/go-cache/build
+                        -e GOMODCACHE=/go-cache/mod
+                        -v cicd-go-cache:/go-cache
                     '''
                 }
             }
@@ -79,8 +88,11 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "=== Running Vitest with 100% Coverage Threshold ==="
-                    npm test
+                    echo "=== Running Go Tests with Statement Coverage ==="
+                    go test -v -coverprofile=coverage.out -covermode=atomic ./...
+
+                    echo "=== Coverage Summary by Function ==="
+                    go tool cover -func=coverage.out
 
                     echo "=== Tests Passed ==="
                 '''
@@ -89,7 +101,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts(
-                        artifacts: 'coverage/**',
+                        artifacts: 'coverage.out',
                         allowEmptyArchive: true
                     )
                 }
@@ -97,17 +109,18 @@ pipeline {
         }
 
         // ============================================================
-        // BUILD APPLICATION (VITE STATIC BUNDLE)
+        // BUILD APPLICATION BINARY
         // ============================================================
         stage('Build Application') {
             agent {
                 docker {
-                    image 'node:22-alpine'
+                    image 'golang:1.27-alpine'
                     reuseNode true
                     args '''
                         -e HOME=/tmp
-                        -e npm_config_cache=/npm-cache
-                        -v cicd-npm-cache:/npm-cache
+                        -e GOCACHE=/go-cache/build
+                        -e GOMODCACHE=/go-cache/mod
+                        -v cicd-go-cache:/go-cache
                     '''
                 }
             }
@@ -116,11 +129,12 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "=== Building Static Bundle (vite build) ==="
-                    npm run build
+                    echo "=== Compiling Standalone Linux Binary ==="
+                    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server .
 
-                    echo "=== Build Output ==="
-                    ls -lh dist
+                    echo "=== Binary Created ==="
+                    ls -lh server
+                    file server || true
                 '''
             }
         }
@@ -221,9 +235,15 @@ pipeline {
                         zip -r latest-app.zip . \
                             -x ".git/*" \
                             -x ".env*" \
-                            -x "node_modules/*" \
-                            -x "dist/*" \
-                            -x "coverage/*" \
+                            -x "server" \
+                            -x "server.exe" \
+                            -x "main" \
+                            -x "app" \
+                            -x "*.out" \
+                            -x "*.test" \
+                            -x "*.prof" \
+                            -x "cov*" \
+                            -x "coverage*" \
                             -x ".trivy-cache/*" \
                             -x "trivy-results.sarif" \
                             -x "latest-app.zip" \
@@ -241,12 +261,12 @@ pipeline {
                     fi
                     echo "OK: file .env tidak ada di zip"
 
-                    echo "=== Verify node_modules & dist excluded ==="
-                    if unzip -Z1 latest-app.zip | grep -E '^(node_modules|dist)/' >/dev/null; then
-                        echo "ERROR: zip masih berisi node_modules atau hasil build"
+                    echo "=== Verify build binary excluded ==="
+                    if unzip -Z1 latest-app.zip | grep -E '^server$' >/dev/null; then
+                        echo "ERROR: zip masih berisi biner hasil build"
                         exit 1
                     fi
-                    echo "OK: node_modules dan dist tidak disertakan dalam zip"
+                    echo "OK: biner hasil build tidak disertakan dalam zip"
 
                     echo "=== Package Content (sample) ==="
                     unzip -l latest-app.zip | head -n 60
