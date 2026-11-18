@@ -1,0 +1,10 @@
+import{apiRequest}from'../../../helpers/apiHelper'
+export const getCategories=()=>apiRequest('/public/categories')
+export const getPublicPosts=(q='',category='')=>apiRequest(`/public/posts?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`)
+export const getPublicPost=slug=>apiRequest(`/public/posts/${encodeURIComponent(slug)}`)
+export const getPosts=()=>apiRequest('/posts')
+export const getStats=()=>apiRequest('/posts/stats')
+export const savePost=(data,id)=>apiRequest(id?`/posts/${id}`:'/posts',{method:id?'PUT':'POST',body:JSON.stringify(data)})
+export const togglePublish=id=>apiRequest(`/posts/${id}/toggle-publish`,{method:'PATCH'})
+export const deletePost=id=>apiRequest(`/posts/${id}`,{method:'DELETE'})
+export const generatePost=data=>apiRequest('/posts/ai-generate',{method:'POST',body:JSON.stringify(data)})

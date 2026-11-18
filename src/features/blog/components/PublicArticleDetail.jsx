@@ -1,0 +1,5 @@
+import{useEffect,useState}from'react'
+import{getPublicPost}from'../api/blogApi'
+import{formatDate,readingLabel}from'../../../helpers/toolsHelper'
+import MarkdownViewer from'../../../components/MarkdownViewer'
+export default function PublicArticleDetail({slug,navigate}){const[p,setP]=useState(null),[err,setErr]=useState('');useEffect(()=>{getPublicPost(slug).then(setP).catch(e=>setErr(e.message))},[slug]);if(err)return <main className="container"><p>{err}</p><button onClick={()=>navigate('/')}>Kembali</button></main>;if(!p)return <p className="empty">Memuat artikel...</p>;return <main className="reading"><button className="link" onClick={()=>navigate('/')}>← Semua artikel</button><small>{p.category}</small><h1>{p.title}</h1><p>{formatDate(p.published_at)} · {readingLabel(p.reading_time)}</p><h3>{p.excerpt}</h3><MarkdownViewer content={p.content}/></main>}

@@ -1,0 +1,2 @@
+# Frontend Delcom Blog (P9)
+React + Vite SPA. Jalankan `npm install`, pastikan backend di `localhost:8081`, lalu `npm run dev` dan buka `http://localhost:5174`. Build: `npm run build`; test: `npm test`. Login menyimpan JWT di localStorage. Vite proxy `/api` ke backend. Untuk Admin, ubah role akun menjadi `admin` pada database.

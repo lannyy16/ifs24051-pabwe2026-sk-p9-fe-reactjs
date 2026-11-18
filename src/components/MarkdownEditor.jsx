@@ -1,0 +1,4 @@
+import{useEffect,useRef}from'react'
+import Editor from'@toast-ui/editor'
+import'@toast-ui/editor/dist/toastui-editor.css'
+export default function MarkdownEditor({value='',onChange=()=>{}}){const el=useRef(null),instance=useRef(null);useEffect(()=>{if(!el.current)return;instance.current=new Editor({el:el.current,height:'420px',initialEditType:'markdown',previewStyle:'vertical',initialValue:value,usageStatistics:false,events:{change:()=>onChange(instance.current?.getMarkdown()||'')}});return()=>instance.current?.destroy()},[]);useEffect(()=>{if(instance.current&&instance.current.getMarkdown()!==value)instance.current.setMarkdown(value||'')},[value]);return <div ref={el} aria-label="Editor Markdown"/>}

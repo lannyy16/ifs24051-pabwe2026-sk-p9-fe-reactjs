@@ -1,0 +1,4 @@
+const base=import.meta.env.VITE_API_BASE||''
+export function getToken(){return localStorage.getItem('delcom_token')||''}
+export function setToken(token){if(token)localStorage.setItem('delcom_token',token);else localStorage.removeItem('delcom_token')}
+export async function apiRequest(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};const token=getToken();if(token)headers.Authorization=`Bearer ${token}`;const res=await fetch(`${base}/api${path}`,{...options,headers});const body=await res.json().catch(()=>({}));if(!res.ok||body.status==='error')throw new Error(body.message||'Permintaan gagal');return body.data}

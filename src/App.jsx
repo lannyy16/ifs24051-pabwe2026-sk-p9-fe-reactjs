@@ -1,0 +1,11 @@
+import{useEffect,useState}from'react'
+import{getToken,setToken}from'./helpers/apiHelper'
+import{profile,logout}from'./features/auth/api/authApi'
+import{notify}from'./helpers/toolsHelper'
+import StickyNavbar from'./features/blog/components/StickyNavbar'
+import PublicArticleList from'./features/blog/components/PublicArticleList'
+import PublicArticleDetail from'./features/blog/components/PublicArticleDetail'
+import AuthPage from'./features/auth/components/AuthPage'
+import AuthorDashboard from'./features/blog/components/AuthorDashboard'
+import AdminDashboard from'./features/admin/components/AdminDashboard'
+export default function App(){const[path,setPath]=useState(location.pathname),[user,setUser]=useState(null),[ready,setReady]=useState(false);function navigate(p){history.pushState({},'',p);setPath(p);scrollTo(0,0)}useEffect(()=>{const pop=()=>setPath(location.pathname);addEventListener('popstate',pop);return()=>removeEventListener('popstate',pop)},[]);useEffect(()=>{if(!getToken()){setReady(true);return}profile().then(setUser).catch(()=>setToken('')).finally(()=>setReady(true))},[]);async function signout(){try{await logout()}catch{}setUser(null);navigate('/');notify('Berhasil keluar')}if(!ready)return <p className="empty">Memuat...</p>;return <><StickyNavbar user={user} navigate={navigate} onLogout={signout}/>{['/login','/register'].includes(path)?<AuthPage mode={path.slice(1)} onSuccess={setUser} navigate={navigate}/>:path==='/author'?(user?<AuthorDashboard user={user}/>:<AuthPage onSuccess={setUser} navigate={navigate}/>):path==='/admin'?(user?.role==='admin'?<AdminDashboard/>:<main className="container"><p className="empty">Halaman khusus admin.</p></main>):path.startsWith('/posts/')?<PublicArticleDetail slug={decodeURIComponent(path.split('/')[2]||'')} navigate={navigate}/>:path==='/'||path==='/public'?<PublicArticleList navigate={navigate}/>:<main className="container"><p className="empty">Halaman tidak ditemukan.</p></main>}<footer className="site-footer">© {new Date().getFullYear()} Delcom Blog</footer></>}

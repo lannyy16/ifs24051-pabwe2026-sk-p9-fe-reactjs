@@ -1,0 +1,1 @@
+export default function PostStats({stats={}}){return <div className="stats">{[['Total Artikel',stats.total||0],['Telah Terbit',stats.published||0],['Masih Draf',stats.draft||0]].map(([k,v])=><div key={k}><small>{k}</small><strong>{v}</strong></div>)}</div>}
