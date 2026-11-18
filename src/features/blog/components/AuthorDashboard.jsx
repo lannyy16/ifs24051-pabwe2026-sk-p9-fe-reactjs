@@ -1,7 +1,138 @@
-import{useEffect,useState}from'react'
-import{getPosts,getStats,togglePublish,deletePost}from'../api/blogApi'
-import{notify,formatDate}from'../../../helpers/toolsHelper'
-import PostStats from'./PostStats'
-import PostModal from'../modals/PostModal'
-import AiPostGeneratorModal from'../modals/AiPostGeneratorModal'
-export default function AuthorDashboard({user}){const[posts,setPosts]=useState([]),[stats,setStats]=useState({}),[edit,setEdit]=useState(null),[ai,setAi]=useState(false);async function refresh(){try{const[a,b]=await Promise.all([getPosts(),getStats()]);setPosts(a);setStats(b)}catch(e){notify(e.message,'error')}}useEffect(()=>{refresh()},[]);async function remove(id){if(!confirm('Hapus artikel ini?'))return;try{await deletePost(id);refresh()}catch(e){notify(e.message,'error')}}async function toggle(id){try{await togglePublish(id);refresh()}catch(e){notify(e.message,'error')}}return <main className="workspace"><div className="workspace-head"><div><small>AUTHOR WORKSPACE</small><h1>Halo, {user?.username}</h1><p>Kelola ide dan publikasi artikelmu.</p></div><div><button onClick={()=>setAi(true)}>✦ AI Generator</button> <button className="primary" onClick={()=>setEdit({})}>＋ Artikel baru</button></div></div><PostStats stats={stats}/><section className="tablebox"><h2>Artikel saya</h2><table><thead><tr><th>Judul</th><th>Kategori</th><th>Status</th><th>Diperbarui</th><th>Aksi</th></tr></thead><tbody>{posts.map(p=><tr key={p.id}><td>{p.title}<small>/{p.slug}</small></td><td>{p.category}</td><td>{p.is_published?'Terbit':'Draf'}</td><td>{formatDate(p.updated_at)}</td><td><button onClick={()=>setEdit(p)}>Edit</button> <button onClick={()=>toggle(p.id)}>{p.is_published?'Tarik':'Terbitkan'}</button> <button onClick={()=>remove(p.id)}>Hapus</button></td></tr>)}</tbody></table>{!posts.length&&<p className="empty">Belum ada artikel.</p>}</section>{edit&&<PostModal post={edit} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);refresh()}}/>}{ai&&<AiPostGeneratorModal onClose={()=>setAi(false)} onApply={a=>{setAi(false);setEdit({title:a.title,category:a.category,excerpt:a.excerpt,content:a.content_markdown})}}/>}</main>}
+import { useCallback, useEffect, useState } from 'react'
+import { IconDotsVertical, IconPlus, IconSparkles } from '@tabler/icons-react'
+import PostStats from './PostStats'
+import PostModal from '../modals/PostModal'
+import AiPostGeneratorModal from '../modals/AiPostGeneratorModal'
+import { deletePost, getMyPosts, getStats, togglePublish } from '../api/blogApi'
+import { confirmDelete, formatDate, showError, showSuccess } from '../../../helpers/toolsHelper'
+
+/** Ruang kerja penulis (full width): statistik, tabel artikel, kebab menu, toggle terbit. */
+export default function AuthorDashboard({ navigate }) {
+  const [posts, setPosts] = useState([])
+  const [stats, setStats] = useState({ total: 0, published: 0, draft: 0 })
+  const [loading, setLoading] = useState(true)
+  const [menuId, setMenuId] = useState(null)
+  const [modal, setModal] = useState({ type: null, post: null, initial: null })
+
+  const load = useCallback(async () => {
+    try {
+      const [p, s] = await Promise.all([getMyPosts(), getStats()])
+      setPosts(p)
+      setStats(s)
+    } catch (err) {
+      showError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const closeModal = () => setModal({ type: null, post: null, initial: null })
+
+  const toggle = async (p) => {
+    try {
+      await togglePublish(p.id)
+      await load()
+    } catch (err) {
+      showError(err.message)
+    }
+  }
+
+  const remove = async (p) => {
+    setMenuId(null)
+    if (!(await confirmDelete(p.title))) return
+    try {
+      await deletePost(p.id)
+      showSuccess('Artikel berhasil dihapus')
+      await load()
+    } catch (err) {
+      showError(err.message)
+    }
+  }
+
+  const edit = (p) => {
+    setMenuId(null)
+    setModal({ type: 'post', post: p, initial: null })
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Ruang Kerja Penulis</h1>
+        <div className="flex gap-2">
+          <button type="button" className="btn-ghost" onClick={() => setModal({ type: 'ai', post: null, initial: null })}>
+            <IconSparkles size={16} /> AI Generator
+          </button>
+          <button type="button" className="btn-primary" onClick={() => setModal({ type: 'post', post: null, initial: null })}>
+            <IconPlus size={16} /> Tambah Artikel
+          </button>
+        </div>
+      </div>
+
+      <PostStats stats={stats} />
+
+      <div className="card overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+            <tr>
+              <th className="px-4 py-3">Judul</th>
+              <th className="px-4 py-3">Kategori</th>
+              <th className="px-4 py-3">Terbit</th>
+              <th className="px-4 py-3">Dibuat</th>
+              <th className="px-4 py-3 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Memuat...</td></tr>}
+            {!loading && posts.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Belum ada artikel.</td></tr>
+            )}
+            {posts.map((p) => (
+              <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
+                <td className="px-4 py-3 font-medium">{p.title}</td>
+                <td className="px-4 py-3">{p.category}</td>
+                <td className="px-4 py-3">
+                  <button type="button" role="switch" aria-checked={p.is_published}
+                    aria-label={`Status terbit ${p.title}`} onClick={() => toggle(p)}
+                    className={`relative h-6 w-11 rounded-full transition cursor-pointer ${p.is_published ? 'bg-accent' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${p.is_published ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </td>
+                <td className="px-4 py-3">{formatDate(p.created_at)}</td>
+                <td className="relative px-4 py-3 text-right">
+                  <button type="button" aria-label={`Menu ${p.title}`} className="btn-ghost px-2"
+                    onClick={() => setMenuId(menuId === p.id ? null : p.id)}>
+                    <IconDotsVertical size={16} />
+                  </button>
+                  {menuId === p.id && (
+                    <div className="card absolute right-4 z-10 mt-1 w-40 py-1 text-left">
+                      <button type="button" className="block w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => edit(p)}>Edit</button>
+                      {p.is_published && (
+                        <button type="button" className="block w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => { setMenuId(null); navigate(`/posts/${p.slug}`) }}>Lihat</button>
+                      )}
+                      <button type="button" className="block w-full px-4 py-2 text-left text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => remove(p)}>Hapus</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <PostModal
+        open={modal.type === 'post'}
+        post={modal.post}
+        initial={modal.initial}
+        onClose={closeModal}
+        onSaved={() => { closeModal(); load() }}
+      />
+      <AiPostGeneratorModal
+        open={modal.type === 'ai'}
+        onClose={closeModal}
+        onApply={(article) => setModal({ type: 'post', post: null, initial: article })}
+      />
+    </main>
+  )
+}

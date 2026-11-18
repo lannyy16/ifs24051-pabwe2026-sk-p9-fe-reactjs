@@ -1,4 +1,79 @@
-import{useEffect,useState}from'react'
-import{getCategories,getPublicPosts}from'../api/blogApi'
-import{formatDate,readingLabel}from'../../../helpers/toolsHelper'
-export default function PublicArticleList({navigate}){const[posts,setPosts]=useState([]),[cats,setCats]=useState([]),[q,setQ]=useState(''),[cat,setCat]=useState('Semua'),[err,setErr]=useState('');useEffect(()=>{getCategories().then(setCats).catch(e=>setErr(e.message))},[]);useEffect(()=>{const t=setTimeout(()=>getPublicPosts(q,cat==='Semua'?'':cat).then(setPosts).catch(e=>setErr(e.message)),200);return()=>clearTimeout(t)},[q,cat]);return <main className="container"><section className="hero"><small>RUANG BERBAGI GAGASAN</small><h1>Cerita hebat dimulai<br/>dari <em>satu tulisan.</em></h1><p>Temukan wawasan, ide, dan perspektif baru dari komunitas penulis.</p><button className="primary" onClick={()=>navigate('/register')}>Mulai menulis ↗</button></section><section><div className="section-head"><div><small>PILIHAN KOMUNITAS</small><h2>Artikel terbaru</h2></div><input placeholder="Cari artikel..." value={q} onChange={e=>setQ(e.target.value)}/></div><div className="pills"><button onClick={()=>setCat('Semua')}>Semua</button>{cats.map(x=><button key={x} onClick={()=>setCat(x)}>{x}</button>)}</div>{err&&<p className="error">{err}</p>}<div className="grid">{posts.map(p=><article className="post" key={p.id} onClick={()=>navigate(`/posts/${p.slug}`)}><small>{p.category} · {readingLabel(p.reading_time)}</small><h3>{p.title}</h3><p>{p.excerpt||p.content?.slice(0,140)}</p><footer>{formatDate(p.published_at)} <b>Baca artikel ↗</b></footer></article>)}</div>{!posts.length&&!err&&<p className="empty">Belum ada artikel terbit.</p>}</section></main>}
+import { useEffect, useState } from 'react'
+import { IconClock, IconSearch } from '@tabler/icons-react'
+import useInput from '../../../hooks/useInput'
+import { getCategories, getPublicPosts } from '../api/blogApi'
+import { formatDate } from '../../../helpers/toolsHelper'
+
+/** Beranda: galeri artikel publik + pencarian real-time + filter kategori (pill). */
+export default function PublicArticleList({ navigate }) {
+  const [q, onQ] = useInput('')
+  const [category, setCategory] = useState('')
+  const [categories, setCategories] = useState([])
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => setCategories([]))
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    getPublicPosts({ q, category })
+      .then((data) => { if (active) { setPosts(data); setError('') } })
+      .catch((err) => { if (active) setError(err.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [q, category])
+
+  const pill = (value, label) => (
+    <button key={label} type="button" onClick={() => setCategory(value)}
+      className={`rounded-full border px-3.5 py-1.5 text-sm cursor-pointer ${category === value
+        ? 'border-accent bg-accent text-white'
+        : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}>
+      {label}
+    </button>
+  )
+
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 py-8">
+      <section className="mb-6 text-center">
+        <h1 className="text-3xl font-bold">Artikel Terbaru</h1>
+        <p className="mt-1 text-slate-500">Bacaan pilihan dari para penulis Delcom Blog.</p>
+      </section>
+
+      <div className="relative mx-auto mb-4 max-w-xl">
+        <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input aria-label="Cari artikel" placeholder="Cari artikel..." className="input pl-9" value={q} onChange={onQ} />
+      </div>
+
+      <div className="mb-6 flex flex-wrap justify-center gap-2">
+        {pill('', 'Semua')}
+        {categories.map((c) => pill(c, c))}
+      </div>
+
+      {loading && <p className="text-center text-slate-500">Memuat artikel...</p>}
+      {error && <p className="text-center text-rose-600">{error}</p>}
+      {!loading && !error && posts.length === 0 && <p className="text-center text-slate-500">Belum ada artikel.</p>}
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {posts.map((p) => (
+          <article key={p.id} className="card flex cursor-pointer flex-col overflow-hidden transition hover:shadow-md"
+            onClick={() => navigate(`/posts/${p.slug}`)}>
+            {p.cover_image_path && <img src={p.cover_image_path} alt={p.title} className="h-40 w-full object-cover" />}
+            <div className="flex flex-1 flex-col p-4">
+              <span className="mb-2 w-fit rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">{p.category}</span>
+              <h2 className="mb-1 text-lg font-semibold">{p.title}</h2>
+              <p className="mb-3 flex-1 text-sm text-slate-500">{p.excerpt}</p>
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>{p.author.username} · {formatDate(p.published_at)}</span>
+                <span className="flex items-center gap-1"><IconClock size={14} />{p.reading_time} mnt baca</span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </main>
+  )
+}

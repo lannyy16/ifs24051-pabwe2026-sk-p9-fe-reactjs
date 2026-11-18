@@ -1,4 +1,37 @@
-import{useEffect,useRef}from'react'
-import Editor from'@toast-ui/editor'
-import'@toast-ui/editor/dist/toastui-editor.css'
-export default function MarkdownEditor({value='',onChange=()=>{}}){const el=useRef(null),instance=useRef(null);useEffect(()=>{if(!el.current)return;instance.current=new Editor({el:el.current,height:'420px',initialEditType:'markdown',previewStyle:'vertical',initialValue:value,usageStatistics:false,events:{change:()=>onChange(instance.current?.getMarkdown()||'')}});return()=>instance.current?.destroy()},[]);useEffect(()=>{if(instance.current&&instance.current.getMarkdown()!==value)instance.current.setMarkdown(value||'')},[value]);return <div ref={el} aria-label="Editor Markdown"/>}
+import { useEffect, useRef } from 'react'
+import Editor from '@toast-ui/editor'
+import DOMPurify from 'dompurify'
+import '@toast-ui/editor/dist/toastui-editor.css'
+import '@toast-ui/editor/dist/theme/toastui-editor-dark.css'
+
+/** Wrapper Toast UI Editor (WYSIWYG/Markdown, preview, tema gelap). */
+export default function MarkdownEditor({ value = '', onChange, height = '420px' }) {
+  const rootRef = useRef(null)
+  const editorRef = useRef(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  useEffect(() => {
+    const editor = new Editor({
+      el: rootRef.current,
+      height,
+      initialValue: value,
+      initialEditType: 'markdown',
+      previewStyle: 'tab',
+      usageStatistics: false,
+      customHTMLSanitizer: (html) => DOMPurify.sanitize(html),
+      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+      events: { change: () => onChangeRef.current?.(editor.getMarkdown()) },
+    })
+    editorRef.current = editor
+    return () => editor.destroy()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (editor && editor.getMarkdown() !== value) editor.setMarkdown(value)
+  }, [value])
+
+  return <div ref={rootRef} data-testid="markdown-editor" />
+}

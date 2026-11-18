@@ -1,4 +1,5 @@
-import{apiRequest}from'../../../helpers/apiHelper'
-export const getAdminUsers=()=>apiRequest('/admin/users')
-export const getAdminPosts=()=>apiRequest('/admin/posts')
-export const getUserPosts=id=>apiRequest(`/admin/users/${id}/posts`)
+import { apiRequest } from '../../../helpers/apiHelper'
+
+export const getUsers = async () => (await apiRequest('/admin/users')).data
+export const getAllPosts = async () => (await apiRequest('/admin/posts')).data
+export const getUserPosts = async (id) => (await apiRequest(`/admin/users/${id}/posts`)).data
