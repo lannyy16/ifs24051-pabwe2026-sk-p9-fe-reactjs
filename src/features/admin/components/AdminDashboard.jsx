@@ -40,8 +40,8 @@ export default function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         {[['Total Pengguna', users.length], ['Total Artikel', totalPosts], ['Total Terbit', totalPublished]].map(([label, value]) => (
           <div key={label} className="card p-5">
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-1 text-3xl font-bold text-accent">{value}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{label}</p>
+            <p className="mt-1 text-3xl font-bold text-accent-ink">{value}</p>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {posts.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Tidak ada artikel.</td></tr>}
+            {posts.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Tidak ada artikel.</td></tr>}
             {posts.map((p) => (
               <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
                 <td className="px-4 py-3 font-medium">{p.title}</td><td className="px-4 py-3">{p.author.username}</td>

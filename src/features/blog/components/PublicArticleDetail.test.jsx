@@ -25,7 +25,7 @@ describe('PublicArticleDetail', () => {
     render(<PublicArticleDetail slug="judul" navigate={navigate} />)
     expect(screen.getByText('Memuat artikel...')).toBeInTheDocument()
     expect(await screen.findByText('Judul')).toBeInTheDocument()
-    expect(screen.getByTestId('viewer')).toHaveTextContent('# isi')
+    expect(await screen.findByTestId('viewer')).toHaveTextContent('# isi')
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByText('Oleh sari')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Kembali/ }))

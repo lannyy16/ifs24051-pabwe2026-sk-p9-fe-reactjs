@@ -15,7 +15,7 @@ export default function AuthModal({ open, onClose, onAuthSuccess, navigate }) {
           <LoginForm onSuccess={onAuthSuccess} />
           <p className="mt-4 text-center text-sm">
             Belum punya akun?{' '}
-            <button type="button" className="font-medium text-accent hover:underline cursor-pointer"
+            <button type="button" className="font-medium text-accent-ink hover:underline cursor-pointer"
               onClick={() => { onClose(); navigate('/register') }}>Daftar</button>
           </p>
         </div>

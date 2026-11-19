@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import useTheme from './hooks/useTheme'
 import { clearSession, getStoredUser, saveSession } from './helpers/apiHelper'
 import { logout } from './features/auth/api/authApi'
@@ -7,21 +7,23 @@ import AuthModal from './features/auth/modals/AuthModal'
 import StickyNavbar from './features/blog/components/StickyNavbar'
 import PublicArticleList from './features/blog/components/PublicArticleList'
 import PublicArticleDetail from './features/blog/components/PublicArticleDetail'
-import AuthorDashboard from './features/blog/components/AuthorDashboard'
-import AdminDashboard from './features/admin/components/AdminDashboard'
+
+const AuthorDashboard = lazy(() => import('./features/blog/components/AuthorDashboard'))
+const AdminDashboard = lazy(() => import('./features/admin/components/AdminDashboard'))
 
 /** Menentukan tampilan (atau redirect) berdasarkan path URL dan sesi pengguna. */
 export function resolveRoute(path, user) {
-  if (path === '/' || path === '/public') return { name: 'list' }
+  if (path === '/' || path === '/public' || path === '/posts') return { name: 'list' }
+  if (path === '/posts/create') return user ? { name: 'author', create: true } : { redirect: '/login' }
   const detail = path.match(/^\/posts\/([^/]+)$/)
   if (detail) return { name: 'detail', slug: decodeURIComponent(detail[1]) }
   if (path === '/login' || path === '/register') {
-    return user ? { redirect: '/author' } : { name: path.slice(1) }
+    return user ? { redirect: '/dashboard' } : { name: path.slice(1) }
   }
-  if (path === '/author') return user ? { name: 'author' } : { redirect: '/login' }
+  if (path === '/dashboard') return user ? { name: 'author' } : { redirect: '/login' }
   if (path === '/admin') {
     if (!user) return { redirect: '/login' }
-    return user.role === 'admin' ? { name: 'admin' } : { redirect: '/author' }
+    return user.role === 'admin' ? { name: 'admin' } : { redirect: '/dashboard' }
   }
   return { name: 'notfound' }
 }
@@ -54,7 +56,7 @@ export default function App() {
     saveSession(token, u)
     setUser(u)
     setLoginOpen(false)
-    navigate(u.role === 'admin' ? '/admin' : '/author')
+    navigate(u.role === 'admin' ? '/admin' : '/dashboard')
   }
 
   const onLogout = async () => {
@@ -70,17 +72,22 @@ export default function App() {
       case 'detail': return <PublicArticleDetail slug={route.slug} navigate={navigate} />
       case 'login':
       case 'register': return <AuthPage mode={route.name} onAuthSuccess={onAuthSuccess} navigate={navigate} />
-      case 'author': return <AuthorDashboard navigate={navigate} />
+      case 'author': return <AuthorDashboard key={path} navigate={navigate} startCreate={Boolean(route.create)} />
       case 'admin': return <AdminDashboard />
       case 'notfound':
         return (
           <main className="py-20 text-center">
             <h1 className="text-3xl font-bold">404</h1>
-            <p className="mt-2 text-slate-500">Halaman tidak ditemukan.</p>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">Halaman tidak ditemukan.</p>
             <button type="button" className="btn-primary mt-4" onClick={() => navigate('/')}>Ke Beranda</button>
           </main>
         )
-      default: return null
+      default:
+        return (
+          <main className="py-20 text-center">
+            <h1 className="text-2xl font-bold">Mengalihkan...</h1>
+          </main>
+        )
     }
   }
 
@@ -90,7 +97,15 @@ export default function App() {
         user={user} theme={theme} onToggleTheme={toggleTheme} accent={accent} onAccent={setAccent}
         navigate={navigate} onLogout={onLogout} onOpenLogin={() => setLoginOpen(true)}
       />
-      {view()}
+      <Suspense
+        fallback={(
+          <main className="py-20 text-center">
+            <h1 className="text-2xl font-bold">Memuat halaman...</h1>
+          </main>
+        )}
+      >
+        {view()}
+      </Suspense>
       <AuthModal open={loginOpen} onClose={() => setLoginOpen(false)} onAuthSuccess={onAuthSuccess} navigate={navigate} />
     </>
   )

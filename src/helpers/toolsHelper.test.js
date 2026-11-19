@@ -5,9 +5,9 @@ import { confirmDelete, formatDate, showError, showSuccess } from './toolsHelper
 vi.mock('sweetalert2', () => ({ default: { fire: vi.fn() } }))
 
 describe('toolsHelper', () => {
-  it('showSuccess & showError memanggil Swal', () => {
-    showSuccess('ok')
-    showError('gagal')
+  it('showSuccess & showError memanggil Swal', async () => {
+    await showSuccess('ok')
+    await showError('gagal')
     expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'success', text: 'ok' }))
     expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'error', text: 'gagal' }))
   })

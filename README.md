@@ -35,7 +35,9 @@ dengan URL backend, tanpa `/api` di akhir.
 | `/`, `/public` | Galeri artikel + pencarian + filter kategori | Publik |
 | `/posts/:slug` | Detail artikel (Markdown) | Publik |
 | `/login`, `/register` | Form `login-username`, `login-password`, `login-submit` | Publik |
-| `/author` | Ruang kerja penulis (statistik, tabel, kebab ⋮, toggle, AI Generator) | Login |
+| `/dashboard` | Ruang kerja penulis (statistik, tabel, kebab ⋮, toggle, AI Generator) | Login |
+| `/posts/create` | Dashboard penulis dengan form tambah artikel terbuka | Login |
+| `/posts` | Sama dengan beranda (daftar artikel) | Publik |
 | `/admin` | Panel admin (pengguna & seluruh artikel) | Admin |
 
 ## Catatan keamanan
@@ -43,6 +45,13 @@ dengan URL backend, tanpa `/api` di akhir.
 `@toast-ui/editor` membundel DOMPurify lama. Aplikasi ini menambahkan `dompurify` versi terbaru
 sebagai dependensi langsung (+ `overrides`) dan memakainya sebagai `customHTMLSanitizer`
 pada editor & viewer, sehingga `npm audit` / Trivy bersih.
+
+## Performa & aksesibilitas
+
+- Editor/viewer Markdown (Toast UI), SweetAlert2, dan dashboard dimuat malas (code-splitting) sehingga bundel awal ±76 KB gzip.
+- Source map dibuat saat build, `robots.txt` dan meta description tersedia.
+- Kontras warna memenuhi WCAG AA di mode terang & gelap (token `--accent-ink`), semua halaman memiliki `<main>` dan `<h1>`.
+- Header cache untuk `/assets/*` (hash file sudah unik) perlu diatur di web server hosting, mis. `Cache-Control: public, max-age=31536000, immutable`.
 
 ## CI/CD
 

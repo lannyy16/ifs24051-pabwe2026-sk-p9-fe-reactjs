@@ -44,6 +44,7 @@ describe('AiPostGeneratorModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
 
     expect(await screen.findByText('Judul AI')).toBeInTheDocument()
+    expect(await screen.findByTestId('viewer')).toHaveTextContent('# konten')
     expect(aiGenerate).toHaveBeenCalledWith({ topic: 'Golang', category: 'Teknologi', include_web_search: true })
     expect(screen.getByText('Sumber 1')).toHaveAttribute('href', 'http://s1')
 

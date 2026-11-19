@@ -50,6 +50,11 @@ describe('AuthorDashboard', () => {
     expect(screen.getByRole('switch', { name: 'Status terbit Draf' })).toHaveAttribute('aria-checked', 'false')
   })
 
+  it('startCreate langsung membuka form tambah artikel', async () => {
+    render(<AuthorDashboard navigate={vi.fn()} startCreate />)
+    expect(within(await screen.findByTestId('post-modal')).getByText('new')).toBeInTheDocument()
+  })
+
   it('menampilkan kondisi kosong', async () => {
     getMyPosts.mockResolvedValue([])
     render(<AuthorDashboard navigate={vi.fn()} />)

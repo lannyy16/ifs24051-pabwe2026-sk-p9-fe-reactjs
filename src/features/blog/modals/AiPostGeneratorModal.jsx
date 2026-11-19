@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { IconSparkles, IconX } from '@tabler/icons-react'
 import useInput from '../../../hooks/useInput'
-import MarkdownViewer from '../../../components/MarkdownViewer'
 import { CATEGORIES, aiGenerate } from '../api/blogApi'
 import { showError } from '../../../helpers/toolsHelper'
+
+const MarkdownViewer = lazy(() => import('../../../components/MarkdownViewer'))
 
 function AiForm({ onClose, onApply }) {
   const [topic, onTopic] = useInput('')
@@ -57,14 +58,16 @@ function AiForm({ onClose, onApply }) {
           {result && (
             <section className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
               <h3 className="text-xl font-bold">{result.title}</h3>
-              <p className="text-sm text-slate-500">{result.category} · {result.excerpt}</p>
-              <MarkdownViewer content={result.content} />
+              <p className="text-sm text-slate-600 dark:text-slate-300">{result.category} · {result.excerpt}</p>
+              <Suspense fallback={<p className="text-slate-600 dark:text-slate-300">Memuat pratinjau...</p>}>
+                <MarkdownViewer content={result.content} />
+              </Suspense>
               {result.used_web_search && (
                 <div>
                   <h4 className="mb-1 text-sm font-semibold">Sumber Rujukan</h4>
                   <ol className="list-decimal space-y-1 pl-5 text-sm">
                     {result.sources.map((s) => (
-                      <li key={s.url}><a href={s.url} target="_blank" rel="noreferrer" className="text-accent hover:underline">{s.title}</a></li>
+                      <li key={s.url}><a href={s.url} target="_blank" rel="noreferrer" className="text-accent-ink hover:underline">{s.title}</a></li>
                     ))}
                   </ol>
                 </div>

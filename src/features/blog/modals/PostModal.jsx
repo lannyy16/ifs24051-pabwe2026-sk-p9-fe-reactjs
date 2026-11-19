@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 import useInput from '../../../hooks/useInput'
-import MarkdownEditor from '../../../components/MarkdownEditor'
 import { CATEGORIES, createPost, updatePost } from '../api/blogApi'
 import { showError, showSuccess } from '../../../helpers/toolsHelper'
+
+const MarkdownEditor = lazy(() => import('../../../components/MarkdownEditor'))
 
 function PostForm({ post, initial, onClose, onSaved }) {
   const source = post ?? initial ?? {}
@@ -69,7 +70,9 @@ function PostForm({ post, initial, onClose, onSaved }) {
           </div>
           <div>
             <span className="mb-1 block text-sm font-medium">Isi Artikel (Markdown)</span>
-            <MarkdownEditor value={content} onChange={setContent} />
+            <Suspense fallback={<p className="text-slate-600 dark:text-slate-300">Memuat editor...</p>}>
+              <MarkdownEditor value={content} onChange={setContent} />
+            </Suspense>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />

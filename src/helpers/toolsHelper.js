@@ -1,12 +1,18 @@
-import Swal from 'sweetalert2'
+// SweetAlert2 dimuat malas (lazy) agar tidak membebani bundel awal.
+const loadSwal = async () => (await import('sweetalert2')).default
 
-export const showSuccess = (message) =>
-  Swal.fire({ icon: 'success', title: 'Berhasil', text: message, timer: 1800, showConfirmButton: false })
+export const showSuccess = async (message) => {
+  const Swal = await loadSwal()
+  return Swal.fire({ icon: 'success', title: 'Berhasil', text: message, timer: 1800, showConfirmButton: false })
+}
 
-export const showError = (message) =>
-  Swal.fire({ icon: 'error', title: 'Oops...', text: message })
+export const showError = async (message) => {
+  const Swal = await loadSwal()
+  return Swal.fire({ icon: 'error', title: 'Oops...', text: message })
+}
 
 export const confirmDelete = async (title) => {
+  const Swal = await loadSwal()
   const result = await Swal.fire({
     icon: 'warning',
     title: 'Hapus artikel?',

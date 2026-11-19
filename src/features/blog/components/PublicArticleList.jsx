@@ -40,11 +40,11 @@ export default function PublicArticleList({ navigate }) {
     <main className="mx-auto w-full max-w-6xl px-4 py-8">
       <section className="mb-6 text-center">
         <h1 className="text-3xl font-bold">Artikel Terbaru</h1>
-        <p className="mt-1 text-slate-500">Bacaan pilihan dari para penulis Delcom Blog.</p>
+        <p className="mt-1 text-slate-600 dark:text-slate-300">Bacaan pilihan dari para penulis Delcom Blog.</p>
       </section>
 
       <div className="relative mx-auto mb-4 max-w-xl">
-        <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         <input aria-label="Cari artikel" placeholder="Cari artikel..." className="input pl-9" value={q} onChange={onQ} />
       </div>
 
@@ -53,9 +53,9 @@ export default function PublicArticleList({ navigate }) {
         {categories.map((c) => pill(c, c))}
       </div>
 
-      {loading && <p className="text-center text-slate-500">Memuat artikel...</p>}
-      {error && <p className="text-center text-rose-600">{error}</p>}
-      {!loading && !error && posts.length === 0 && <p className="text-center text-slate-500">Belum ada artikel.</p>}
+      {loading && <p className="text-center text-slate-600 dark:text-slate-300">Memuat artikel...</p>}
+      {error && <p className="text-center text-rose-700 dark:text-rose-400">{error}</p>}
+      {!loading && !error && posts.length === 0 && <p className="text-center text-slate-600 dark:text-slate-300">Belum ada artikel.</p>}
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((p) => (
@@ -63,10 +63,10 @@ export default function PublicArticleList({ navigate }) {
             onClick={() => navigate(`/posts/${p.slug}`)}>
             {p.cover_image_path && <img src={p.cover_image_path} alt={p.title} className="h-40 w-full object-cover" />}
             <div className="flex flex-1 flex-col p-4">
-              <span className="mb-2 w-fit rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">{p.category}</span>
+              <span className="mb-2 w-fit rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink">{p.category}</span>
               <h2 className="mb-1 text-lg font-semibold">{p.title}</h2>
-              <p className="mb-3 flex-1 text-sm text-slate-500">{p.excerpt}</p>
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <p className="mb-3 flex-1 text-sm text-slate-600 dark:text-slate-300">{p.excerpt}</p>
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                 <span>{p.author.username} · {formatDate(p.published_at)}</span>
                 <span className="flex items-center gap-1"><IconClock size={14} />{p.reading_time} mnt baca</span>
               </div>

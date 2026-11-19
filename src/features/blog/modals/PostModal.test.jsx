@@ -39,7 +39,7 @@ describe('PostModal', () => {
     await userEvent.selectOptions(screen.getByLabelText('Kategori'), 'Teknologi')
     await userEvent.type(screen.getByLabelText('Ringkasan (opsional)'), 'ringkas')
     await userEvent.type(screen.getByLabelText('URL Gambar Sampul (opsional)'), 'http://c')
-    await userEvent.type(screen.getByLabelText('editor'), 'isi')
+    await userEvent.type(await screen.findByLabelText('editor'), 'isi')
     await userEvent.click(screen.getByLabelText('Terbitkan sekarang'))
     await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
 
@@ -75,10 +75,10 @@ describe('PostModal', () => {
     expect(showSuccess).toHaveBeenCalledWith('Artikel berhasil diperbarui')
   })
 
-  it('terisi otomatis dari hasil AI (initial)', () => {
+  it('terisi otomatis dari hasil AI (initial)', async () => {
     render(<PostModal open post={null} initial={{ title: 'Dari AI', content: 'konten AI', category: 'Umum' }} onClose={vi.fn()} onSaved={vi.fn()} />)
     expect(screen.getByLabelText('Judul')).toHaveValue('Dari AI')
-    expect(screen.getByLabelText('editor')).toHaveValue('konten AI')
+    expect(await screen.findByLabelText('editor')).toHaveValue('konten AI')
   })
 
   it('menampilkan error API dan status menyimpan', async () => {
