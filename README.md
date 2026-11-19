@@ -25,8 +25,9 @@ npm test
 npm run build      # hasil di dist/
 ```
 
-Bila frontend dideploy terpisah dari backend, isi `VITE_API_BASE_URL` (lihat `.env.example`)
-dengan URL backend, tanpa `/api` di akhir.
+Frontend memanggil backend lewat `VITE_API_BASE_URL` (lihat `.env.example`). Jika kosong dan domain
+berakhiran `-fe-reactjs`, alamat backend diturunkan otomatis menjadi `-be-golang-gin` pada domain yang sama.
+Backend harus sudah dideploy dan dapat diakses publik.
 
 ## Rute SPA
 

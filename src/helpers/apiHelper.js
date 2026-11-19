@@ -22,11 +22,25 @@ export const clearSession = () => {
 }
 
 /**
+ * Menentukan alamat backend:
+ * 1. VITE_API_BASE_URL (diisi saat build) bila ada;
+ * 2. pada domain Delcom ...-fe-reactjs.* dipakai backend saudaranya ...-be-golang-gin.*;
+ * 3. selain itu string kosong (proxy Vite saat development).
+ */
+export const resolveBase = (loc = window.location) => {
+  const configured = import.meta.env.VITE_API_BASE_URL
+  if (configured) return configured.replace(/\/+$/, '')
+  return loc.hostname.includes('-fe-reactjs')
+    ? `${loc.protocol}//${loc.hostname.replace('-fe-reactjs', '-be-golang-gin')}`
+    : ''
+}
+
+/**
  * Wrapper fetch terpusat: menyuntikkan Bearer token dan mengurai respons standar
  * { status, message, data }. Melempar Error (dengan .status) jika gagal.
  */
 export async function apiRequest(path, { method = 'GET', body, auth = true } = {}) {
-  const base = import.meta.env.VITE_API_BASE_URL ?? ''
+  const base = resolveBase()
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()
   if (auth && token) headers.Authorization = `Bearer ${token}`

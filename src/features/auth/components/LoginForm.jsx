@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import useInput from '../../../hooks/useInput'
 import { login } from '../api/authApi'
@@ -12,6 +13,7 @@ export default function LoginForm({ onSuccess }) {
   const submit = async (e) => {
     e.preventDefault()
     setLoading(true)
+
     try {
       onSuccess(await login(username, password))
     } catch (err) {
@@ -24,14 +26,49 @@ export default function LoginForm({ onSuccess }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div>
-        <label htmlFor="login-username" className="mb-1 block text-sm font-medium">Username / Email</label>
-        <input id="login-username" className="input" value={username} onChange={onUsername} required />
+        <label
+          htmlFor="login-username"
+          className="mb-1 block text-sm font-medium"
+        >
+          Username / Email
+        </label>
+        <input
+          id="login-username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          className="input"
+          value={username}
+          onChange={onUsername}
+          required
+        />
       </div>
+
       <div>
-        <label htmlFor="login-password" className="mb-1 block text-sm font-medium">Password</label>
-        <input id="login-password" type="password" className="input" value={password} onChange={onPassword} required />
+        <label
+          htmlFor="login-password"
+          className="mb-1 block text-sm font-medium"
+        >
+          Password
+        </label>
+        <input
+          id="login-password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          className="input"
+          value={password}
+          onChange={onPassword}
+          required
+        />
       </div>
-      <button id="login-submit" type="submit" className="btn-primary w-full justify-center" disabled={loading}>
+
+      <button
+        id="login-submit"
+        type="submit"
+        className="btn-primary w-full justify-center"
+        disabled={loading}
+      >
         {loading ? 'Memproses...' : 'Masuk'}
       </button>
     </form>
