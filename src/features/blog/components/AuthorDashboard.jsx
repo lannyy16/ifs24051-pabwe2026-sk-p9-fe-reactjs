@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { IconDotsVertical, IconPlus, IconSparkles } from '@tabler/icons-react'
 import PostStats from './PostStats'
-import PostModal from '../modals/PostModal'
-import AiPostGeneratorModal from '../modals/AiPostGeneratorModal'
 import { deletePost, getMyPosts, getStats, togglePublish } from '../api/blogApi'
 import { confirmDelete, formatDate, showError, showSuccess } from '../../../helpers/toolsHelper'
 
+// Editor Markdown (Toast UI) berat: dimuat hanya saat modal dibuka.
+const PostModal = lazy(() => import('../modals/PostModal'))
+const AiPostGeneratorModal = lazy(() => import('../modals/AiPostGeneratorModal'))
+
 /** Ruang kerja penulis (full width): statistik, tabel artikel, kebab menu, toggle terbit. */
-export default function AuthorDashboard({ navigate, startCreate = false }) {
+export default function AuthorDashboard({ navigate }) {
   const [posts, setPosts] = useState([])
   const [stats, setStats] = useState({ total: 0, published: 0, draft: 0 })
   const [loading, setLoading] = useState(true)
   const [menuId, setMenuId] = useState(null)
-  const [modal, setModal] = useState({ type: startCreate ? 'post' : null, post: null, initial: null })
+  const [modal, setModal] = useState({ type: null, post: null, initial: null })
 
   const load = useCallback(async () => {
     try {
@@ -57,7 +59,7 @@ export default function AuthorDashboard({ navigate, startCreate = false }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
+    <div className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Ruang Kerja Penulis</h1>
         <div className="flex gap-2">
@@ -84,9 +86,9 @@ export default function AuthorDashboard({ navigate, startCreate = false }) {
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Memuat...</td></tr>}
+            {loading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Memuat...</td></tr>}
             {!loading && posts.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Belum ada artikel.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Belum ada artikel.</td></tr>
             )}
             {posts.map((p) => (
               <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
@@ -121,18 +123,24 @@ export default function AuthorDashboard({ navigate, startCreate = false }) {
         </table>
       </div>
 
-      <PostModal
-        open={modal.type === 'post'}
-        post={modal.post}
-        initial={modal.initial}
-        onClose={closeModal}
-        onSaved={() => { closeModal(); load() }}
-      />
-      <AiPostGeneratorModal
-        open={modal.type === 'ai'}
-        onClose={closeModal}
-        onApply={(article) => setModal({ type: 'post', post: null, initial: article })}
-      />
-    </main>
+      <Suspense fallback={null}>
+        {modal.type === 'post' && (
+          <PostModal
+            open
+            post={modal.post}
+            initial={modal.initial}
+            onClose={closeModal}
+            onSaved={() => { closeModal(); load() }}
+          />
+        )}
+        {modal.type === 'ai' && (
+          <AiPostGeneratorModal
+            open
+            onClose={closeModal}
+            onApply={(article) => setModal({ type: 'post', post: null, initial: article })}
+          />
+        )}
+      </Suspense>
+    </div>
   )
 }

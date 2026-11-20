@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import useTheme from './hooks/useTheme'
 import { clearSession, getStoredUser, saveSession } from './helpers/apiHelper'
 import { logout } from './features/auth/api/authApi'
@@ -7,23 +7,21 @@ import AuthModal from './features/auth/modals/AuthModal'
 import StickyNavbar from './features/blog/components/StickyNavbar'
 import PublicArticleList from './features/blog/components/PublicArticleList'
 import PublicArticleDetail from './features/blog/components/PublicArticleDetail'
-
-const AuthorDashboard = lazy(() => import('./features/blog/components/AuthorDashboard'))
-const AdminDashboard = lazy(() => import('./features/admin/components/AdminDashboard'))
+import AuthorDashboard from './features/blog/components/AuthorDashboard'
+import AdminDashboard from './features/admin/components/AdminDashboard'
 
 /** Menentukan tampilan (atau redirect) berdasarkan path URL dan sesi pengguna. */
 export function resolveRoute(path, user) {
-  if (path === '/' || path === '/public' || path === '/posts') return { name: 'list' }
-  if (path === '/posts/create') return user ? { name: 'author', create: true } : { redirect: '/login' }
+  if (path === '/' || path === '/public') return { name: 'list' }
   const detail = path.match(/^\/posts\/([^/]+)$/)
   if (detail) return { name: 'detail', slug: decodeURIComponent(detail[1]) }
   if (path === '/login' || path === '/register') {
-    return user ? { redirect: '/dashboard' } : { name: path.slice(1) }
+    return user ? { redirect: '/author' } : { name: path.slice(1) }
   }
-  if (path === '/dashboard') return user ? { name: 'author' } : { redirect: '/login' }
+  if (path === '/author') return user ? { name: 'author' } : { redirect: '/login' }
   if (path === '/admin') {
     if (!user) return { redirect: '/login' }
-    return user.role === 'admin' ? { name: 'admin' } : { redirect: '/dashboard' }
+    return user.role === 'admin' ? { name: 'admin' } : { redirect: '/author' }
   }
   return { name: 'notfound' }
 }
@@ -56,7 +54,7 @@ export default function App() {
     saveSession(token, u)
     setUser(u)
     setLoginOpen(false)
-    navigate(u.role === 'admin' ? '/admin' : '/dashboard')
+    navigate(u.role === 'admin' ? '/admin' : '/author')
   }
 
   const onLogout = async () => {
@@ -72,41 +70,39 @@ export default function App() {
       case 'detail': return <PublicArticleDetail slug={route.slug} navigate={navigate} />
       case 'login':
       case 'register': return <AuthPage mode={route.name} onAuthSuccess={onAuthSuccess} navigate={navigate} />
-      case 'author': return <AuthorDashboard key={path} navigate={navigate} startCreate={Boolean(route.create)} />
+      case 'author': return <AuthorDashboard navigate={navigate} />
       case 'admin': return <AdminDashboard />
       case 'notfound':
         return (
-          <main className="py-20 text-center">
+          <div className="py-20 text-center">
             <h1 className="text-3xl font-bold">404</h1>
-            <p className="mt-2 text-slate-600 dark:text-slate-300">Halaman tidak ditemukan.</p>
+            <p className="mt-2 text-slate-600 dark:text-slate-400">Halaman tidak ditemukan.</p>
             <button type="button" className="btn-primary mt-4" onClick={() => navigate('/')}>Ke Beranda</button>
-          </main>
+          </div>
         )
-      default:
-        return (
-          <main className="py-20 text-center">
-            <h1 className="text-2xl font-bold">Mengalihkan...</h1>
-          </main>
-        )
+      default: return null
     }
   }
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-slate-900"
+      >
+        Lewati ke konten utama
+      </a>
       <StickyNavbar
         user={user} theme={theme} onToggleTheme={toggleTheme} accent={accent} onAccent={setAccent}
         navigate={navigate} onLogout={onLogout} onOpenLogin={() => setLoginOpen(true)}
       />
-      <Suspense
-        fallback={(
-          <main className="py-20 text-center">
-            <h1 className="text-2xl font-bold">Memuat halaman...</h1>
-          </main>
-        )}
-      >
+      <main id="main-content" className="flex-1">
         {view()}
-      </Suspense>
+      </main>
+      <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
+        © 2026 Delcom Blog
+      </footer>
       <AuthModal open={loginOpen} onClose={() => setLoginOpen(false)} onAuthSuccess={onAuthSuccess} navigate={navigate} />
-    </>
+    </div>
   )
 }

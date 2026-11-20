@@ -47,21 +47,21 @@ function RegisterForm({ onSuccess }) {
 export default function AuthPage({ mode = 'login', onAuthSuccess, navigate }) {
   const isLogin = mode === 'login'
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md items-center px-4">
+    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md items-center px-4">
       <div className="card w-full p-6">
         <h1 className="mb-1 text-2xl font-bold">{isLogin ? 'Masuk ke Delcom Blog' : 'Daftar Akun Penulis'}</h1>
-        <p className="mb-5 text-sm text-slate-600 dark:text-slate-300">
+        <p className="mb-5 text-sm text-slate-600 dark:text-slate-400">
           {isLogin ? 'Kelola artikel dan gunakan AI Generator.' : 'Mulai menulis dan bagikan gagasan Anda.'}
         </p>
         {isLogin ? <LoginForm onSuccess={onAuthSuccess} /> : <RegisterForm onSuccess={onAuthSuccess} />}
         <p className="mt-4 text-center text-sm">
           {isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
-          <button type="button" className="font-medium text-accent-ink hover:underline cursor-pointer"
+          <button type="button" className="font-medium text-accent hover:underline cursor-pointer"
             onClick={() => navigate(isLogin ? '/register' : '/login')}>
             {isLogin ? 'Daftar' : 'Masuk'}
           </button>
         </p>
       </div>
-    </main>
+    </div>
   )
 }

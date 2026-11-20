@@ -50,11 +50,6 @@ describe('AuthorDashboard', () => {
     expect(screen.getByRole('switch', { name: 'Status terbit Draf' })).toHaveAttribute('aria-checked', 'false')
   })
 
-  it('startCreate langsung membuka form tambah artikel', async () => {
-    render(<AuthorDashboard navigate={vi.fn()} startCreate />)
-    expect(within(await screen.findByTestId('post-modal')).getByText('new')).toBeInTheDocument()
-  })
-
   it('menampilkan kondisi kosong', async () => {
     getMyPosts.mockResolvedValue([])
     render(<AuthorDashboard navigate={vi.fn()} />)
@@ -96,7 +91,7 @@ describe('AuthorDashboard', () => {
 
     await userEvent.click(screen.getByLabelText('Menu Terbit'))
     await userEvent.click(screen.getByText('Edit'))
-    expect(within(screen.getByTestId('post-modal')).getByText('edit:Terbit')).toBeInTheDocument()
+    expect(within(await screen.findByTestId('post-modal')).getByText('edit:Terbit')).toBeInTheDocument()
     await userEvent.click(screen.getByText('close-post'))
     expect(screen.queryByTestId('post-modal')).not.toBeInTheDocument()
   })
@@ -129,18 +124,18 @@ describe('AuthorDashboard', () => {
     await screen.findByText('Terbit')
 
     await userEvent.click(screen.getByRole('button', { name: /Tambah Artikel/ }))
-    expect(within(screen.getByTestId('post-modal')).getByText('new')).toBeInTheDocument()
+    expect(within(await screen.findByTestId('post-modal')).getByText('new')).toBeInTheDocument()
     await userEvent.click(screen.getByText('saved'))
     expect(screen.queryByTestId('post-modal')).not.toBeInTheDocument()
     await waitFor(() => expect(getMyPosts).toHaveBeenCalledTimes(2))
 
     await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
-    await userEvent.click(screen.getByText('close-ai'))
+    await userEvent.click(await screen.findByText('close-ai'))
     expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
-    await userEvent.click(screen.getByText('apply'))
+    await userEvent.click(await screen.findByText('apply'))
     expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
-    expect(within(screen.getByTestId('post-modal')).getByText('initial:Hasil AI')).toBeInTheDocument()
+    expect(within(await screen.findByTestId('post-modal')).getByText('initial:Hasil AI')).toBeInTheDocument()
   })
 })

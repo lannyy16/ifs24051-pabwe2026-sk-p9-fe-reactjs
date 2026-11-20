@@ -7,7 +7,7 @@ import { logout } from './features/auth/api/authApi'
 vi.mock('./features/auth/api/authApi', () => ({ logout: vi.fn() }))
 vi.mock('./features/blog/components/PublicArticleList', () => ({ default: () => <div>VIEW-LIST</div> }))
 vi.mock('./features/blog/components/PublicArticleDetail', () => ({ default: ({ slug }) => <div>VIEW-DETAIL:{slug}</div> }))
-vi.mock('./features/blog/components/AuthorDashboard', () => ({ default: ({ startCreate }) => <div>VIEW-AUTHOR{startCreate ? ':create' : ''}</div> }))
+vi.mock('./features/blog/components/AuthorDashboard', () => ({ default: () => <div>VIEW-AUTHOR</div> }))
 vi.mock('./features/admin/components/AdminDashboard', () => ({ default: () => <div>VIEW-ADMIN</div> }))
 vi.mock('./features/auth/components/AuthPage', () => ({
   default: ({ mode, onAuthSuccess }) => (
@@ -33,7 +33,7 @@ vi.mock('./features/blog/components/StickyNavbar', () => ({
     <nav>
       <span>user:{user ? user.role : 'guest'}</span>
       <button onClick={() => navigate('/posts/abc%20d')}>go-detail</button>
-      <button onClick={() => navigate('/dashboard')}>go-author</button>
+      <button onClick={() => navigate('/author')}>go-author</button>
       <button onClick={() => navigate('/admin')}>go-admin</button>
       <button onClick={() => navigate('/xyz')}>go-unknown</button>
       <button onClick={() => navigate('/register')}>go-register</button>
@@ -62,17 +62,14 @@ describe('resolveRoute', () => {
   it('memetakan seluruh path', () => {
     expect(resolveRoute('/', null)).toEqual({ name: 'list' })
     expect(resolveRoute('/public', null)).toEqual({ name: 'list' })
-    expect(resolveRoute('/posts', null)).toEqual({ name: 'list' })
-    expect(resolveRoute('/posts/create', null)).toEqual({ redirect: '/login' })
-    expect(resolveRoute('/posts/create', member)).toEqual({ name: 'author', create: true })
     expect(resolveRoute('/posts/a%20b', null)).toEqual({ name: 'detail', slug: 'a b' })
     expect(resolveRoute('/login', null)).toEqual({ name: 'login' })
     expect(resolveRoute('/register', null)).toEqual({ name: 'register' })
-    expect(resolveRoute('/login', member)).toEqual({ redirect: '/dashboard' })
-    expect(resolveRoute('/dashboard', null)).toEqual({ redirect: '/login' })
-    expect(resolveRoute('/dashboard', member)).toEqual({ name: 'author' })
+    expect(resolveRoute('/login', member)).toEqual({ redirect: '/author' })
+    expect(resolveRoute('/author', null)).toEqual({ redirect: '/login' })
+    expect(resolveRoute('/author', member)).toEqual({ name: 'author' })
     expect(resolveRoute('/admin', null)).toEqual({ redirect: '/login' })
-    expect(resolveRoute('/admin', member)).toEqual({ redirect: '/dashboard' })
+    expect(resolveRoute('/admin', member)).toEqual({ redirect: '/author' })
     expect(resolveRoute('/admin', admin)).toEqual({ name: 'admin' })
     expect(resolveRoute('/tidak-ada', null)).toEqual({ name: 'notfound' })
   })
@@ -111,7 +108,7 @@ describe('App', () => {
   })
 
   it('mengalihkan tamu dari /author dan /admin ke /login (replaceState)', async () => {
-    window.history.pushState({}, '', '/dashboard')
+    window.history.pushState({}, '', '/author')
     render(<App />)
     await waitFor(() => expect(screen.getByText('VIEW-LOGIN')).toBeInTheDocument())
     expect(window.location.pathname).toBe('/login')
@@ -124,29 +121,17 @@ describe('App', () => {
     session(member)
     window.history.pushState({}, '', '/admin')
     render(<App />)
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('VIEW-AUTHOR')).toBeInTheDocument())
 
     await userEvent.click(screen.getByText('go-register'))
-    await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(window.location.pathname).toBe('/author'))
   })
 
-  it('/posts/create membuka dashboard dengan form tambah, /posts menampilkan daftar', async () => {
-    session(member)
-    window.history.pushState({}, '', '/posts/create')
-    render(<App />)
-    expect(await screen.findByText('VIEW-AUTHOR:create')).toBeInTheDocument()
-    act(() => {
-      window.history.pushState({}, '', '/posts')
-      window.dispatchEvent(new PopStateEvent('popstate'))
-    })
-    expect(screen.getByText('VIEW-LIST')).toBeInTheDocument()
-  })
-
-  it('admin dapat membuka /admin', async () => {
+  it('admin dapat membuka /admin', () => {
     session(admin)
     window.history.pushState({}, '', '/admin')
     render(<App />)
-    expect(await screen.findByText('VIEW-ADMIN')).toBeInTheDocument()
+    expect(screen.getByText('VIEW-ADMIN')).toBeInTheDocument()
     expect(screen.getByText('user:admin')).toBeInTheDocument()
   })
 
@@ -154,7 +139,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/login')
     const { unmount } = render(<App />)
     await userEvent.click(screen.getByText('auth-member'))
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
+    expect(screen.getByText('VIEW-AUTHOR')).toBeInTheDocument()
     expect(localStorage.getItem('token')).toBe('t1')
     unmount()
 
@@ -162,7 +147,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/login')
     render(<App />)
     await userEvent.click(screen.getByText('auth-admin'))
-    expect(await screen.findByText('VIEW-ADMIN')).toBeInTheDocument()
+    expect(screen.getByText('VIEW-ADMIN')).toBeInTheDocument()
   })
 
   it('login lewat modal navbar: buka, tutup, lalu masuk', async () => {
@@ -175,7 +160,7 @@ describe('App', () => {
     await userEvent.click(screen.getByText('open-login'))
     await userEvent.click(screen.getByText('modal-auth'))
     expect(screen.queryByText('MODAL-LOGIN')).not.toBeInTheDocument()
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
+    expect(screen.getByText('VIEW-AUTHOR')).toBeInTheDocument()
   })
 
   it('logout membersihkan sesi, juga ketika API logout gagal', async () => {

@@ -29,7 +29,7 @@ describe('StickyNavbar', () => {
     const p = props()
     render(<StickyNavbar {...p} user={{ role: 'member' }} theme="dark" />)
     await userEvent.click(screen.getByText('Workspace'))
-    expect(p.navigate).toHaveBeenCalledWith('/dashboard')
+    expect(p.navigate).toHaveBeenCalledWith('/author')
     await userEvent.click(screen.getByText('Keluar'))
     expect(p.onLogout).toHaveBeenCalled()
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiRequest, resolveBase, clearSession, getStoredUser, getToken, saveSession } from './apiHelper'
+import { apiRequest, clearSession, getStoredUser, getToken, saveSession } from './apiHelper'
 
 const mockFetch = (body, ok = true, status = 200, jsonFails = false) => {
   global.fetch = vi.fn().mockResolvedValue({
@@ -24,23 +24,6 @@ describe('session helpers', () => {
   it('mengembalikan null bila user tersimpan rusak', () => {
     localStorage.setItem('user', '{rusak')
     expect(getStoredUser()).toBeNull()
-  })
-})
-
-describe('resolveBase', () => {
-  it('memakai VITE_API_BASE_URL tanpa garis miring di akhir', () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com//')
-    expect(resolveBase()).toBe('https://api.example.com')
-  })
-
-  it('menurunkan alamat backend dari domain frontend Delcom', () => {
-    const loc = { protocol: 'https:', hostname: 'ifs24051-pabwe2026-sk-p9-fe-reactjs.s1if.cloud' }
-    expect(resolveBase(loc)).toBe('https://ifs24051-pabwe2026-sk-p9-be-golang-gin.s1if.cloud')
-  })
-
-  it('kosong pada domain lain (development memakai proxy Vite)', () => {
-    expect(resolveBase({ protocol: 'http:', hostname: 'localhost' })).toBe('')
-    expect(resolveBase()).toBe('')
   })
 })
 

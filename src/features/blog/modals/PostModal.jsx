@@ -1,10 +1,9 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 import useInput from '../../../hooks/useInput'
+import MarkdownEditor from '../../../components/MarkdownEditor'
 import { CATEGORIES, createPost, updatePost } from '../api/blogApi'
 import { showError, showSuccess } from '../../../helpers/toolsHelper'
-
-const MarkdownEditor = lazy(() => import('../../../components/MarkdownEditor'))
 
 function PostForm({ post, initial, onClose, onSaved }) {
   const source = post ?? initial ?? {}
@@ -38,10 +37,10 @@ function PostForm({ post, initial, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
       <div className="card flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden">
         <div className="flex items-center justify-between bg-accent px-5 py-3 text-white">
-          <h2 className="text-lg font-semibold">{post ? 'Edit Artikel' : 'Tambah Artikel'}</h2>
+          <h2 id="post-modal-title" className="text-lg font-semibold">{post ? 'Edit Artikel' : 'Tambah Artikel'}</h2>
           <button type="button" aria-label="Tutup" onClick={onClose} className="cursor-pointer"><IconX size={22} /></button>
         </div>
 
@@ -70,9 +69,7 @@ function PostForm({ post, initial, onClose, onSaved }) {
           </div>
           <div>
             <span className="mb-1 block text-sm font-medium">Isi Artikel (Markdown)</span>
-            <Suspense fallback={<p className="text-slate-600 dark:text-slate-300">Memuat editor...</p>}>
-              <MarkdownEditor value={content} onChange={setContent} />
-            </Suspense>
+            <MarkdownEditor value={content} onChange={setContent} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />

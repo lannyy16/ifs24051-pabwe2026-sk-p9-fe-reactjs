@@ -34,14 +34,14 @@ export default function AdminDashboard() {
   const totalPublished = users.reduce((n, u) => n + u.total_published, 0)
 
   return (
-    <main className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
+    <div className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
       <h1 className="text-2xl font-bold">Panel Administrasi</h1>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {[['Total Pengguna', users.length], ['Total Artikel', totalPosts], ['Total Terbit', totalPublished]].map(([label, value]) => (
           <div key={label} className="card p-5">
-            <p className="text-sm text-slate-600 dark:text-slate-300">{label}</p>
-            <p className="mt-1 text-3xl font-bold text-accent-ink">{value}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{label}</p>
+            <p className="mt-1 text-3xl font-bold text-accent">{value}</p>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {posts.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Tidak ada artikel.</td></tr>}
+            {posts.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Tidak ada artikel.</td></tr>}
             {posts.map((p) => (
               <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
                 <td className="px-4 py-3 font-medium">{p.title}</td><td className="px-4 py-3">{p.author.username}</td>
@@ -96,6 +96,6 @@ export default function AdminDashboard() {
           </tbody>
         </table>
       </section>
-    </main>
+    </div>
   )
 }
