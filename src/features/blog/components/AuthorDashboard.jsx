@@ -1,20 +1,23 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { IconDotsVertical, IconPlus, IconSparkles } from '@tabler/icons-react'
+import Link from '../../../components/Link'
+import usePageMeta from '../../../hooks/usePageMeta'
 import PostStats from './PostStats'
+import PostModal from '../modals/PostModal'
+import AiPostGeneratorModal from '../modals/AiPostGeneratorModal'
 import { deletePost, getMyPosts, getStats, togglePublish } from '../api/blogApi'
 import { confirmDelete, formatDate, showError, showSuccess } from '../../../helpers/toolsHelper'
 
-// Editor Markdown (Toast UI) berat: dimuat hanya saat modal dibuka.
-const PostModal = lazy(() => import('../modals/PostModal'))
-const AiPostGeneratorModal = lazy(() => import('../modals/AiPostGeneratorModal'))
+const menuItem = 'block w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer'
 
 /** Ruang kerja penulis (full width): statistik, tabel artikel, kebab menu, toggle terbit. */
-export default function AuthorDashboard({ navigate }) {
+export default function AuthorDashboard({ startCreate = false }) {
+  usePageMeta('Workspace Penulis - Delcom Blog', 'Kelola artikel, status terbit, dan gunakan AI Generator di workspace penulis Delcom Blog.')
   const [posts, setPosts] = useState([])
   const [stats, setStats] = useState({ total: 0, published: 0, draft: 0 })
   const [loading, setLoading] = useState(true)
   const [menuId, setMenuId] = useState(null)
-  const [modal, setModal] = useState({ type: null, post: null, initial: null })
+  const [modal, setModal] = useState({ type: startCreate ? 'post' : null, post: null, initial: null })
 
   const load = useCallback(async () => {
     try {
@@ -59,61 +62,70 @@ export default function AuthorDashboard({ navigate }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Ruang Kerja Penulis</h1>
+    <main className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-3xl font-extrabold tracking-tight">Ruang Kerja Penulis</h1>
+          <p className="m-0 mt-1 muted">Kelola artikel Anda dan terbitkan kapan saja.</p>
+        </div>
         <div className="flex gap-2">
           <button type="button" className="btn-ghost" onClick={() => setModal({ type: 'ai', post: null, initial: null })}>
-            <IconSparkles size={16} /> AI Generator
+            <IconSparkles size={16} aria-hidden="true" /> AI Generator
           </button>
           <button type="button" className="btn-primary" onClick={() => setModal({ type: 'post', post: null, initial: null })}>
-            <IconPlus size={16} /> Tambah Artikel
+            <IconPlus size={16} aria-hidden="true" /> Tambah Artikel
           </button>
         </div>
       </div>
 
       <PostStats stats={stats} />
 
-      <div className="card overflow-x-auto">
+      <section className="card overflow-x-auto" aria-label="Daftar artikel saya">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+          <caption className="sr-only">Artikel milik Anda</caption>
+          <thead className="bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-100">
             <tr>
-              <th className="px-4 py-3">Judul</th>
-              <th className="px-4 py-3">Kategori</th>
-              <th className="px-4 py-3">Terbit</th>
-              <th className="px-4 py-3">Dibuat</th>
-              <th className="px-4 py-3 text-right">Aksi</th>
+              <th scope="col" className="px-5 py-3.5">Judul</th>
+              <th scope="col" className="px-5 py-3.5">Kategori</th>
+              <th scope="col" className="px-5 py-3.5">Terbit</th>
+              <th scope="col" className="px-5 py-3.5">Dibuat</th>
+              <th scope="col" className="px-5 py-3.5 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Memuat...</td></tr>}
+            {loading && <tr><td colSpan={5} className="px-5 py-8 text-center muted">Memuat...</td></tr>}
             {!loading && posts.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Belum ada artikel.</td></tr>
+              <tr><td colSpan={5} className="px-5 py-10 text-center muted">Belum ada artikel. Klik &quot;Tambah Artikel&quot; atau coba AI Generator.</td></tr>
             )}
             {posts.map((p) => (
               <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
-                <td className="px-4 py-3 font-medium">{p.title}</td>
-                <td className="px-4 py-3">{p.category}</td>
-                <td className="px-4 py-3">
-                  <button type="button" role="switch" aria-checked={p.is_published}
-                    aria-label={`Status terbit ${p.title}`} onClick={() => toggle(p)}
-                    className={`relative h-6 w-11 rounded-full transition cursor-pointer ${p.is_published ? 'bg-accent' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${p.is_published ? 'left-5' : 'left-0.5'}`} />
+                <td className="px-5 py-3.5 font-semibold">{p.title}</td>
+                <td className="px-5 py-3.5"><span className="badge">{p.category}</span></td>
+                <td className="px-5 py-3.5">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={p.is_published}
+                    aria-label={`Status terbit ${p.title}`}
+                    onClick={() => toggle(p)}
+                    className={`relative h-7 w-12 rounded-full transition cursor-pointer ${p.is_published ? 'bg-accent' : 'bg-slate-400 dark:bg-slate-600'}`}
+                  >
+                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${p.is_published ? 'left-6' : 'left-1'}`} />
                   </button>
                 </td>
-                <td className="px-4 py-3">{formatDate(p.created_at)}</td>
-                <td className="relative px-4 py-3 text-right">
-                  <button type="button" aria-label={`Menu ${p.title}`} className="btn-ghost px-2"
+                <td className="px-5 py-3.5">{formatDate(p.created_at)}</td>
+                <td className="relative px-5 py-3.5 text-right">
+                  <button type="button" aria-label={`Menu ${p.title}`} className="btn-ghost !min-h-9 !px-2.5"
                     onClick={() => setMenuId(menuId === p.id ? null : p.id)}>
-                    <IconDotsVertical size={16} />
+                    <IconDotsVertical size={16} aria-hidden="true" />
                   </button>
                   {menuId === p.id && (
-                    <div className="card absolute right-4 z-10 mt-1 w-40 py-1 text-left">
-                      <button type="button" className="block w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => edit(p)}>Edit</button>
+                    <div className="card absolute right-5 z-10 mt-1 w-44 overflow-hidden py-1 text-left shadow-xl">
+                      <button type="button" className={menuItem} onClick={() => edit(p)}>Edit</button>
                       {p.is_published && (
-                        <button type="button" className="block w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => { setMenuId(null); navigate(`/posts/${p.slug}`) }}>Lihat</button>
+                        <Link to={`/posts/${p.slug}`} className={menuItem} onClick={() => setMenuId(null)}>Lihat</Link>
                       )}
-                      <button type="button" className="block w-full px-4 py-2 text-left text-rose-700 dark:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer" onClick={() => remove(p)}>Hapus</button>
+                      <button type="button" className={`${menuItem} text-rose-700 dark:text-rose-400`} onClick={() => remove(p)}>Hapus</button>
                     </div>
                   )}
                 </td>
@@ -121,26 +133,20 @@ export default function AuthorDashboard({ navigate }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </section>
 
-      <Suspense fallback={null}>
-        {modal.type === 'post' && (
-          <PostModal
-            open
-            post={modal.post}
-            initial={modal.initial}
-            onClose={closeModal}
-            onSaved={() => { closeModal(); load() }}
-          />
-        )}
-        {modal.type === 'ai' && (
-          <AiPostGeneratorModal
-            open
-            onClose={closeModal}
-            onApply={(article) => setModal({ type: 'post', post: null, initial: article })}
-          />
-        )}
-      </Suspense>
-    </div>
+      <PostModal
+        open={modal.type === 'post'}
+        post={modal.post}
+        initial={modal.initial}
+        onClose={closeModal}
+        onSaved={() => { closeModal(); load() }}
+      />
+      <AiPostGeneratorModal
+        open={modal.type === 'ai'}
+        onClose={closeModal}
+        onApply={(article) => setModal({ type: 'post', post: null, initial: article })}
+      />
+    </main>
   )
 }

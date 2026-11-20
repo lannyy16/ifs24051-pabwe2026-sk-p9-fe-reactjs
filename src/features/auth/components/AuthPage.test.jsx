@@ -18,7 +18,7 @@ describe('AuthPage (login)', () => {
   it('menyediakan id wajib dan mengirim kredensial', async () => {
     login.mockResolvedValue({ token: 't', user: { id: 1 } })
     const onAuthSuccess = vi.fn()
-    render(<AuthPage mode="login" onAuthSuccess={onAuthSuccess} navigate={vi.fn()} />)
+    render(<AuthPage mode="login" onAuthSuccess={onAuthSuccess} />)
 
     await userEvent.type(document.getElementById('login-username'), 'admin')
     await userEvent.type(document.getElementById('login-password'), 'rahasia')
@@ -31,7 +31,7 @@ describe('AuthPage (login)', () => {
   it('menampilkan status memproses lalu error bila gagal', async () => {
     const d = deferred()
     login.mockReturnValueOnce(d.promise)
-    render(<AuthPage onAuthSuccess={vi.fn()} navigate={vi.fn()} />)
+    render(<AuthPage onAuthSuccess={vi.fn()} />)
     await userEvent.type(document.getElementById('login-username'), 'a')
     await userEvent.type(document.getElementById('login-password'), 'b')
     await userEvent.click(document.getElementById('login-submit'))
@@ -46,10 +46,10 @@ describe('AuthPage (login)', () => {
   })
 
   it('tautan beralih ke halaman daftar', async () => {
-    const navigate = vi.fn()
-    render(<AuthPage mode="login" onAuthSuccess={vi.fn()} navigate={navigate} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Daftar' }))
-    expect(navigate).toHaveBeenCalledWith('/register')
+    render(<AuthPage mode="login" onAuthSuccess={vi.fn()} />)
+    await userEvent.click(screen.getByRole('link', { name: 'Daftar' }))
+    expect(window.location.pathname).toBe('/register')
+    expect(document.title).toMatch(/Masuk/)
   })
 })
 
@@ -57,7 +57,7 @@ describe('AuthPage (register)', () => {
   it('mendaftarkan penulis baru', async () => {
     register.mockResolvedValue({ token: 't', user: { id: 2 } })
     const onAuthSuccess = vi.fn()
-    render(<AuthPage mode="register" onAuthSuccess={onAuthSuccess} navigate={vi.fn()} />)
+    render(<AuthPage mode="register" onAuthSuccess={onAuthSuccess} />)
 
     await userEvent.type(document.getElementById('register-username'), 'budi')
     await userEvent.type(document.getElementById('register-email'), 'budi@mail.com')
@@ -71,8 +71,7 @@ describe('AuthPage (register)', () => {
   it('memproses, error, dan tautan kembali ke login', async () => {
     const d = deferred()
     register.mockReturnValueOnce(d.promise)
-    const navigate = vi.fn()
-    render(<AuthPage mode="register" onAuthSuccess={vi.fn()} navigate={navigate} />)
+    render(<AuthPage mode="register" onAuthSuccess={vi.fn()} />)
     await userEvent.type(document.getElementById('register-username'), 'budi')
     await userEvent.type(document.getElementById('register-email'), 'budi@mail.com')
     await userEvent.type(document.getElementById('register-password'), '123456')
@@ -85,7 +84,8 @@ describe('AuthPage (register)', () => {
     await userEvent.click(document.getElementById('register-submit'))
     await waitFor(() => expect(showError).toHaveBeenCalledWith('dipakai'))
 
-    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
-    expect(navigate).toHaveBeenCalledWith('/login')
+    await userEvent.click(screen.getByRole('link', { name: 'Masuk' }))
+    expect(window.location.pathname).toBe('/login')
+    expect(document.title).toMatch(/Daftar/)
   })
 })

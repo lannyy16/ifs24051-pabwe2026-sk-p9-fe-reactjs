@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiRequest, clearSession, getStoredUser, getToken, saveSession } from './apiHelper'
+import { apiRequest, resolveBase, clearSession, getStoredUser, getToken, saveSession } from './apiHelper'
 
 const mockFetch = (body, ok = true, status = 200, jsonFails = false) => {
   global.fetch = vi.fn().mockResolvedValue({
@@ -24,6 +24,15 @@ describe('session helpers', () => {
   it('mengembalikan null bila user tersimpan rusak', () => {
     localStorage.setItem('user', '{rusak')
     expect(getStoredUser()).toBeNull()
+  })
+})
+
+describe('resolveBase', () => {
+  it('memakai VITE_API_BASE_URL tanpa garis miring di akhir, kosong bila tidak diatur', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com//')
+    expect(resolveBase()).toBe('https://api.example.com')
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    expect(resolveBase()).toBe('')
   })
 })
 
@@ -66,6 +75,11 @@ describe('apiRequest', () => {
   it('memakai pesan default bila server tidak memberi pesan', async () => {
     mockFetch({ status: 'fail' }, false, 400)
     await expect(apiRequest('/x')).rejects.toThrow('Terjadi kesalahan')
+  })
+
+  it('menangani gagal koneksi (network error)', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+    await expect(apiRequest('/x')).rejects.toMatchObject({ message: 'Tidak dapat terhubung ke server', status: 0 })
   })
 
   it('menangani respons non-JSON', async () => {

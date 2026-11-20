@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import PublicArticleDetail from './PublicArticleDetail'
@@ -21,37 +21,38 @@ const deferred = () => {
 describe('PublicArticleDetail', () => {
   it('memuat artikel tanpa sampul, lalu tombol kembali', async () => {
     getPublicPost.mockResolvedValue(article())
-    const navigate = vi.fn()
-    render(<PublicArticleDetail slug="judul" navigate={navigate} />)
-    expect(screen.getByText('Memuat artikel...')).toBeInTheDocument()
-    expect(await screen.findByText('Judul')).toBeInTheDocument()
+    render(<PublicArticleDetail slug="judul" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Memuat artikel...')
+    expect(screen.getByRole('heading', { level: 1, hidden: true })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Judul' })).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toBe('Judul - Delcom Blog'))
     expect(await screen.findByTestId('viewer')).toHaveTextContent('# isi')
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    expect(screen.getByText('Oleh sari')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Kembali/ }))
-    expect(navigate).toHaveBeenCalledWith('/')
+    expect(screen.getByText('sari')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: /Kembali/ }))
+    expect(window.location.pathname).toBe('/')
   })
 
   it('menampilkan gambar sampul bila ada', async () => {
     getPublicPost.mockResolvedValue(article({ cover_image_path: 'http://img/c.png' }))
-    render(<PublicArticleDetail slug="x" navigate={vi.fn()} />)
+    render(<PublicArticleDetail slug="x" />)
     expect(await screen.findByAltText('Judul')).toHaveAttribute('src', 'http://img/c.png')
   })
 
   it('menampilkan error', async () => {
     getPublicPost.mockRejectedValue(new Error('Artikel tidak ditemukan'))
-    render(<PublicArticleDetail slug="x" navigate={vi.fn()} />)
-    expect(await screen.findByText('Artikel tidak ditemukan')).toBeInTheDocument()
-    expect(screen.queryByText('Memuat artikel...')).not.toBeInTheDocument()
+    render(<PublicArticleDetail slug="x" />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Artikel tidak ditemukan')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('mengabaikan hasil setelah unmount (sukses & gagal)', async () => {
     const a = deferred()
     const b = deferred()
     getPublicPost.mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise)
-    const r1 = render(<PublicArticleDetail slug="a" navigate={vi.fn()} />)
+    const r1 = render(<PublicArticleDetail slug="a" />)
     r1.unmount()
-    const r2 = render(<PublicArticleDetail slug="b" navigate={vi.fn()} />)
+    const r2 = render(<PublicArticleDetail slug="b" />)
     r2.unmount()
     await act(async () => { a.resolve(article()); b.reject(new Error('x')) })
     expect(screen.queryByText('Judul')).not.toBeInTheDocument()

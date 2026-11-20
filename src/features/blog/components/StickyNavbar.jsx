@@ -1,40 +1,66 @@
-import { IconMoon, IconSun, IconPencil } from '@tabler/icons-react'
+import { IconFeather, IconMoon, IconSun } from '@tabler/icons-react'
+import Link from '../../../components/Link'
 import { ACCENTS } from '../../../hooks/useTheme'
 
+const SWATCH = { indigo: '#4f46e5', emerald: '#047857', rose: '#be123c', amber: '#b45309' }
+const linkClass =
+  'rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer'
+
 /** Navbar atas sticky (tanpa sidebar) untuk seluruh halaman. */
-export default function StickyNavbar({ user, theme, onToggleTheme, accent, onAccent, navigate, onLogout, onOpenLogin }) {
+export default function StickyNavbar({ user, theme, onToggleTheme, accent, onAccent, onLogout, onOpenLogin }) {
+  const isDark = theme === 'dark'
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
-      <nav className="mx-auto flex h-16 w-full max-w-[96vw] items-center justify-between gap-3">
-        <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2 text-lg font-bold cursor-pointer">
-          <IconPencil className="text-accent" /> Delcom Blog
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="hidden gap-1 sm:flex" role="group" aria-label="Aksen warna">
-            {ACCENTS.map((a) => (
-              <button key={a} type="button" aria-label={`Aksen ${a}`} onClick={() => onAccent(a)}
-                className={`h-6 w-6 rounded-full border-2 cursor-pointer ${a === accent ? 'border-slate-700 dark:border-white' : 'border-transparent'}`}
-                style={{ background: { indigo: '#4f46e5', emerald: '#047857', rose: '#be123c', amber: '#b45309' }[a] }} />
-            ))}
-          </div>
-          <button type="button" aria-label="Ganti tema" onClick={onToggleTheme} className="btn-ghost px-2.5">
-            {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-          </button>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/85">
+      <nav aria-label="Navigasi utama" className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+        <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+          <span className="hero-bg grid h-9 w-9 place-items-center rounded-xl text-white" aria-hidden="true">
+            <IconFeather size={20} />
+          </span>
+          Delcom Blog
+        </Link>
+
+        <ul className="m-0 flex list-none flex-wrap items-center gap-1 p-0">
+          <li>
+            <Link to="/" className={linkClass}>Beranda</Link>
+          </li>
           {user ? (
             <>
-              <button type="button" className="btn-ghost" onClick={() => navigate('/author')}>Workspace</button>
-              {user.role === 'admin' && (
-                <button type="button" className="btn-ghost" onClick={() => navigate('/admin')}>Admin</button>
-              )}
-              <button type="button" className="btn-primary" onClick={onLogout}>Keluar</button>
+              <li><Link to="/dashboard" className={linkClass}>Workspace</Link></li>
+              {user.role === 'admin' && <li><Link to="/admin" className={linkClass}>Admin</Link></li>}
+              <li><button type="button" onClick={onLogout} className={linkClass}>Keluar</button></li>
             </>
           ) : (
             <>
-              <button type="button" className="btn-ghost" onClick={onOpenLogin}>Masuk</button>
-              <button type="button" className="btn-primary" onClick={() => navigate('/register')}>Daftar</button>
+              <li><button type="button" onClick={onOpenLogin} className={linkClass}>Masuk</button></li>
+              <li>
+                <Link to="/register" className="btn-primary">Daftar</Link>
+              </li>
             </>
           )}
-        </div>
+          <li className="ml-1 hidden items-center gap-1.5 sm:flex" role="group" aria-label="Aksen warna">
+            {ACCENTS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                aria-label={`Aksen ${a}`}
+                aria-pressed={a === accent}
+                onClick={() => onAccent(a)}
+                className={`h-6 w-6 rounded-full border-2 cursor-pointer ${a === accent ? 'border-slate-900 dark:border-white' : 'border-transparent'}`}
+                style={{ background: SWATCH[a] }}
+              />
+            ))}
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+              className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              {isDark ? <IconSun size={20} aria-hidden="true" /> : <IconMoon size={20} aria-hidden="true" />}
+            </button>
+          </li>
+        </ul>
       </nav>
     </header>
   )

@@ -1,15 +1,21 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
-import { IconArrowLeft, IconClock } from '@tabler/icons-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { IconArrowLeft, IconCalendar, IconClock, IconUser } from '@tabler/icons-react'
+import Link from '../../../components/Link'
+import usePageMeta from '../../../hooks/usePageMeta'
 import { getPublicPost } from '../api/blogApi'
 import { formatDate } from '../../../helpers/toolsHelper'
 
-// Toast UI Viewer berukuran besar: dimuat hanya saat halaman detail dibuka.
 const MarkdownViewer = lazy(() => import('../../../components/MarkdownViewer'))
 
-/** Halaman baca artikel (full width). */
-export default function PublicArticleDetail({ slug, navigate }) {
+/** Halaman baca artikel. */
+export default function PublicArticleDetail({ slug }) {
   const [post, setPost] = useState(null)
   const [error, setError] = useState('')
+
+  usePageMeta(
+    post ? `${post.title} - Delcom Blog` : 'Artikel - Delcom Blog',
+    post ? post.excerpt : 'Baca artikel lengkap di Delcom Blog.',
+  )
 
   useEffect(() => {
     let active = true
@@ -22,30 +28,35 @@ export default function PublicArticleDetail({ slug, navigate }) {
   }, [slug])
 
   return (
-    <div className="mx-auto w-full max-w-[96vw] py-8">
-      <button type="button" className="btn-ghost mb-4" onClick={() => navigate('/')}>
-        <IconArrowLeft size={16} /> Kembali
-      </button>
-      {error && <p className="text-rose-700 dark:text-rose-400">{error}</p>}
+    <main className="mx-auto w-full max-w-4xl px-4 py-8">
+      <Link to="/" className="btn-ghost mb-6">
+        <IconArrowLeft size={16} aria-hidden="true" /> Kembali ke beranda
+      </Link>
       {!post && <h1 className="sr-only">Detail artikel</h1>}
-      {!post && !error && <p className="text-slate-600 dark:text-slate-400">Memuat artikel...</p>}
+      {error && <p role="alert" className="rounded-xl bg-rose-100 p-4 font-medium text-rose-900 dark:bg-rose-950 dark:text-rose-100">{error}</p>}
+      {!post && !error && <div role="status" className="skeleton h-96"><span className="sr-only">Memuat artikel...</span></div>}
       {post && (
-        <article className="card p-6 md:p-10">
-          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">{post.category}</span>
-          <h1 className="mt-3 text-3xl font-bold md:text-4xl">{post.title}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 text-sm text-slate-600 dark:text-slate-400">
-            <span>Oleh {post.author.username}</span>
-            <span>{formatDate(post.published_at)}</span>
-            <span className="flex items-center gap-1"><IconClock size={14} />{post.reading_time} menit baca</span>
-          </p>
+        <article>
+          <header className="hero-bg rounded-3xl p-8 text-white sm:p-12">
+            <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900">{post.category}</span>
+            <h1 className="m-0 mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">{post.title}</h1>
+            <p className="m-0 mt-3 text-lg text-white">{post.excerpt}</p>
+            <p className="m-0 mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-white">
+              <span className="inline-flex items-center gap-1.5"><IconUser size={16} aria-hidden="true" />{post.author.username}</span>
+              <span className="inline-flex items-center gap-1.5"><IconCalendar size={16} aria-hidden="true" />{formatDate(post.published_at)}</span>
+              <span className="inline-flex items-center gap-1.5"><IconClock size={16} aria-hidden="true" />{post.reading_time} menit baca</span>
+            </p>
+          </header>
           {post.cover_image_path && (
-            <img src={post.cover_image_path} alt={post.title} width="1200" height="420" className="my-6 max-h-[420px] w-full rounded-xl object-cover" />
+            <img src={post.cover_image_path} alt={post.title} width="1200" height="480" className="mt-6 max-h-[420px] w-full rounded-2xl object-cover" />
           )}
-          <div className="mt-6">
-            <Suspense fallback={null}><MarkdownViewer content={post.content} /></Suspense>
+          <div className="card mt-6 p-6 sm:p-10">
+            <Suspense fallback={<p role="status" className="muted">Memuat konten...</p>}>
+              <MarkdownViewer content={post.content} />
+            </Suspense>
           </div>
         </article>
       )}
-    </div>
+    </main>
   )
 }

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -32,6 +32,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'esnext',
     sourcemap: true,
     chunkSizeWarningLimit: 900,
   },
@@ -45,12 +46,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{js,jsx}'],
       exclude: ['src/main.jsx', 'src/setupTests.js', 'src/**/*.test.{js,jsx}'],
-      thresholds: {
-        statements: 100,
-        branches: 100,
-        functions: 100,
-        lines: 100,
-      },
+      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
     },
   },
 })

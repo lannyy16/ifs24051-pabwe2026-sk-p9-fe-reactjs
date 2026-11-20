@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
+import { IconArticle, IconUsers, IconWorldUpload } from '@tabler/icons-react'
+import usePageMeta from '../../../hooks/usePageMeta'
+import StatCard from '../../../components/StatCard'
 import { getAllPosts, getUserPosts, getUsers } from '../api/adminApi'
 import { formatDate, showError } from '../../../helpers/toolsHelper'
 
+const th = 'px-5 py-3.5'
+const td = 'px-5 py-3.5'
+
 /** Panel admin (full width): monitoring pengguna & seluruh artikel. */
 export default function AdminDashboard() {
+  usePageMeta('Panel Admin - Delcom Blog', 'Pantau pengguna dan seluruh artikel di Delcom Blog.')
   const [users, setUsers] = useState([])
   const [posts, setPosts] = useState([])
   const [selected, setSelected] = useState(null)
@@ -34,36 +41,37 @@ export default function AdminDashboard() {
   const totalPublished = users.reduce((n, u) => n + u.total_published, 0)
 
   return (
-    <div className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
-      <h1 className="text-2xl font-bold">Panel Administrasi</h1>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[['Total Pengguna', users.length], ['Total Artikel', totalPosts], ['Total Terbit', totalPublished]].map(([label, value]) => (
-          <div key={label} className="card p-5">
-            <p className="text-sm text-slate-600 dark:text-slate-400">{label}</p>
-            <p className="mt-1 text-3xl font-bold text-accent">{value}</p>
-          </div>
-        ))}
+    <main className="mx-auto w-full max-w-[96vw] space-y-6 py-8">
+      <div>
+        <h1 className="m-0 text-3xl font-extrabold tracking-tight">Panel Administrasi</h1>
+        <p className="m-0 mt-1 muted">Pantau seluruh pengguna dan artikel yang beredar.</p>
       </div>
 
-      <section className="card overflow-x-auto">
-        <h2 className="px-4 pt-4 text-lg font-semibold">Direktori Pengguna</h2>
-        <table className="mt-2 w-full text-left text-sm">
-          <thead className="bg-slate-100 dark:bg-slate-700">
+      <section aria-label="Ringkasan" className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Total Pengguna" value={users.length} icon={IconUsers} />
+        <StatCard label="Total Artikel" value={totalPosts} icon={IconArticle} />
+        <StatCard label="Total Terbit" value={totalPublished} icon={IconWorldUpload} />
+      </section>
+
+      <section className="card overflow-x-auto" aria-labelledby="users-title">
+        <h2 id="users-title" className="m-0 px-5 pt-5 text-lg font-bold">Direktori Pengguna</h2>
+        <table className="mt-3 w-full text-left text-sm">
+          <caption className="sr-only">Daftar pengguna</caption>
+          <thead className="bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-100">
             <tr>
-              <th className="px-4 py-3">ID</th><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th><th className="px-4 py-3">Artikel</th><th className="px-4 py-3">Terbit</th>
-              <th className="px-4 py-3 text-right">Aksi</th>
+              <th scope="col" className={th}>ID</th><th scope="col" className={th}>Username</th><th scope="col" className={th}>Email</th>
+              <th scope="col" className={th}>Role</th><th scope="col" className={th}>Artikel</th><th scope="col" className={th}>Terbit</th>
+              <th scope="col" className={`${th} text-right`}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-slate-200 dark:border-slate-700">
-                <td className="px-4 py-3">{u.id}</td><td className="px-4 py-3 font-medium">{u.username}</td>
-                <td className="px-4 py-3">{u.email}</td><td className="px-4 py-3">{u.role}</td>
-                <td className="px-4 py-3">{u.total_posts}</td><td className="px-4 py-3">{u.total_published}</td>
-                <td className="px-4 py-3 text-right">
-                  <button type="button" className="btn-ghost" onClick={() => showUserPosts(u)}>Lihat Artikel</button>
+                <td className={td}>{u.id}</td><td className={`${td} font-semibold`}>{u.username}</td>
+                <td className={td}>{u.email}</td><td className={td}><span className="badge">{u.role}</span></td>
+                <td className={td}>{u.total_posts}</td><td className={td}>{u.total_published}</td>
+                <td className={`${td} text-right`}>
+                  <button type="button" className="btn-ghost !min-h-9" onClick={() => showUserPosts(u)}>Lihat Artikel</button>
                 </td>
               </tr>
             ))}
@@ -71,31 +79,32 @@ export default function AdminDashboard() {
         </table>
       </section>
 
-      <section className="card overflow-x-auto">
-        <div className="flex items-center justify-between px-4 pt-4">
-          <h2 className="text-lg font-semibold">{selected ? `Artikel milik ${selected.username}` : 'Seluruh Artikel'}</h2>
-          {selected && <button type="button" className="btn-ghost" onClick={loadAll}>Tampilkan Semua</button>}
+      <section className="card overflow-x-auto" aria-labelledby="posts-title">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
+          <h2 id="posts-title" className="m-0 text-lg font-bold">{selected ? `Artikel milik ${selected.username}` : 'Seluruh Artikel'}</h2>
+          {selected && <button type="button" className="btn-ghost !min-h-9" onClick={loadAll}>Tampilkan Semua</button>}
         </div>
-        <table className="mt-2 w-full text-left text-sm">
-          <thead className="bg-slate-100 dark:bg-slate-700">
+        <table className="mt-3 w-full text-left text-sm">
+          <caption className="sr-only">Daftar artikel</caption>
+          <thead className="bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-100">
             <tr>
-              <th className="px-4 py-3">Judul</th><th className="px-4 py-3">Penulis</th><th className="px-4 py-3">Kategori</th>
-              <th className="px-4 py-3">Status</th><th className="px-4 py-3">Dibuat</th>
+              <th scope="col" className={th}>Judul</th><th scope="col" className={th}>Penulis</th><th scope="col" className={th}>Kategori</th>
+              <th scope="col" className={th}>Status</th><th scope="col" className={th}>Dibuat</th>
             </tr>
           </thead>
           <tbody>
-            {posts.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-600 dark:text-slate-400">Tidak ada artikel.</td></tr>}
+            {posts.length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center muted">Tidak ada artikel.</td></tr>}
             {posts.map((p) => (
               <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700">
-                <td className="px-4 py-3 font-medium">{p.title}</td><td className="px-4 py-3">{p.author.username}</td>
-                <td className="px-4 py-3">{p.category}</td>
-                <td className="px-4 py-3">{p.is_published ? 'Terbit' : 'Draf'}</td>
-                <td className="px-4 py-3">{formatDate(p.created_at)}</td>
+                <td className={`${td} font-semibold`}>{p.title}</td><td className={td}>{p.author.username}</td>
+                <td className={td}>{p.category}</td>
+                <td className={td}><span className="badge">{p.is_published ? 'Terbit' : 'Draf'}</span></td>
+                <td className={td}>{formatDate(p.created_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
-    </div>
+    </main>
   )
 }

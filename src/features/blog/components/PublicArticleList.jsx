@@ -1,172 +1,132 @@
-﻿
 import { useEffect, useState } from 'react'
-import { IconClock, IconSearch } from '@tabler/icons-react'
+import { IconClock, IconSearch, IconArticleOff } from '@tabler/icons-react'
+import Link from '../../../components/Link'
+import usePageMeta from '../../../hooks/usePageMeta'
 import useInput from '../../../hooks/useInput'
-import { getCategories, getPublicPosts } from '../api/blogApi'
+import { getPublicPosts } from '../api/blogApi'
+import { CATEGORIES } from '../constants'
 import { formatDate } from '../../../helpers/toolsHelper'
 
-/** Beranda: galeri artikel publik + pencarian real-time + filter kategori. */
-export default function PublicArticleList({ navigate }) {
+const ALL = 'Semua'
+const FILTERS = [ALL, ...CATEGORIES]
+
+function PostCard({ post }) {
+  return (
+    <article className="card group relative flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
+      {post.cover_image_path ? (
+        <img src={post.cover_image_path} alt="" width="640" height="320" loading="lazy" className="h-44 w-full object-cover" />
+      ) : (
+        <div className="cover-bg grid h-44 place-items-center text-5xl font-black text-white" aria-hidden="true">
+          {post.title.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <div className="flex flex-1 flex-col gap-2 p-5">
+        <span className="badge">{post.category}</span>
+        <h2 className="m-0 text-lg font-bold leading-snug">
+          <Link to={`/posts/${post.slug}`} className="text-slate-900 after:absolute after:inset-0 hover:underline dark:text-white">
+            {post.title}
+          </Link>
+        </h2>
+        <p className="m-0 flex-1 text-sm muted">{post.excerpt}</p>
+        <p className="m-0 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs muted">
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{post.author.username}</span>
+          <span>{formatDate(post.published_at)}</span>
+          <span className="inline-flex items-center gap-1"><IconClock size={14} aria-hidden="true" />{post.reading_time} menit baca</span>
+        </p>
+      </div>
+    </article>
+  )
+}
+
+/** Beranda: hero, pencarian real-time, filter kategori (pill), dan galeri artikel. */
+export default function PublicArticleList() {
+  usePageMeta('Delcom Blog - Artikel Teknologi, Pendidikan, dan Lainnya', 'Baca artikel terbaru di Delcom Blog. Cari berdasarkan kata kunci atau filter kategori.')
   const [q, onQ] = useInput('')
-  const [category, setCategory] = useState('')
-  const [categories, setCategories] = useState([])
+  const [category, setCategory] = useState(ALL)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getCategories()
-      .then((data) => {
-        setCategories(Array.isArray(data) ? data : [])
-      })
-      .catch(() => setCategories([]))
-  }, [])
-
-  useEffect(() => {
     let active = true
-
     setLoading(true)
-    setError('')
-
-    getPublicPosts({ q, category })
-      .then((data) => {
-        if (active) {
-          setPosts(Array.isArray(data) ? data : [])
-        }
-      })
-      .catch((err) => {
-        if (active) {
-          setPosts([])
-          setError(err.message || 'Gagal memuat artikel.')
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
+    getPublicPosts({ q, category: category === ALL ? '' : category })
+      .then((data) => { if (active) { setPosts(data); setError('') } })
+      .catch((err) => { if (active) setError(err.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [q, category])
 
-  const pill = (value, label) => (
-    <button
-      key={label}
-      type="button"
-      onClick={() => setCategory(value)}
-      className={`rounded-full border px-3.5 py-1.5 text-sm cursor-pointer ${
-        category === value
-          ? 'border-accent bg-accent text-white'
-          : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'
-      }`}
-    >
-      {label}
-    </button>
-  )
-
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8">
-      <section className="mb-6 text-center">
-        <h1 className="text-3xl font-bold">Artikel Terbaru</h1>
-        <p className="mt-1 text-slate-600 dark:text-slate-400">
-          Bacaan pilihan dari para penulis Delcom Blog.
-        </p>
+    <main>
+      <section className="hero-bg text-white">
+        <div className="mx-auto max-w-7xl px-4 py-14 text-center sm:py-20">
+          <h1 className="m-0 text-4xl font-extrabold tracking-tight sm:text-5xl">Ide, cerita, dan pengetahuan</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-white">
+            Baca artikel pilihan dari para penulis Delcom Blog, atau tulis dan terbitkan gagasanmu sendiri dengan bantuan AI.
+          </p>
+          <div className="relative mx-auto mt-8 max-w-xl text-left">
+            <label htmlFor="search-input" className="sr-only">Cari artikel</label>
+            <IconSearch size={20} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" aria-hidden="true" />
+            <input
+              id="search-input"
+              type="search"
+              value={q}
+              onChange={onQ}
+              placeholder="Cari artikel..."
+              className="input !rounded-2xl !border-transparent !py-3.5 !pl-12 !text-base !text-slate-900 !shadow-lg"
+            />
+          </div>
+        </div>
       </section>
 
-      <div className="relative mx-auto mb-4 max-w-xl">
-        <IconSearch
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          aria-label="Cari artikel"
-          placeholder="Cari artikel..."
-          className="input pl-9"
-          value={q}
-          onChange={onQ}
-        />
-      </div>
-
-      <div className="mb-6 flex flex-wrap justify-center gap-2">
-        {pill('', 'Semua')}
-        {categories.map((c) => pill(c, c))}
-      </div>
-
-      {loading && (
-        <p className="text-center text-slate-600 dark:text-slate-400">
-          Memuat artikel...
-        </p>
-      )}
-
-      {error && (
-        <p className="text-center text-rose-700 dark:text-rose-400">
-          {error}
-        </p>
-      )}
-
-      {!loading && !error && posts.length === 0 && (
-        <p className="text-center text-slate-600 dark:text-slate-400">
-          Belum ada artikel.
-        </p>
-      )}
-
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {posts.map((p) => {
-          // Backend mengirim nama penulis melalui author_name.
-          // author.username tetap didukung jika respons API menggunakan format lama.
-          const authorName =
-            p.author_name ||
-            p.author?.username ||
-            p.author?.name ||
-            'Penulis'
-
-          return (
-            <article
-              key={p.id}
-              className="card flex cursor-pointer flex-col overflow-hidden transition hover:shadow-md"
-              onClick={() => navigate(`/posts/${p.slug}`)}
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div role="group" aria-label="Filter kategori" className="mb-8 flex flex-wrap justify-center gap-2">
+          {FILTERS.map((name) => (
+            <button
+              key={name}
+              type="button"
+              aria-pressed={category === name}
+              onClick={() => setCategory(name)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-semibold cursor-pointer transition ${
+                category === name
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700'
+              }`}
             >
-              {p.cover_image_path && (
-                <img
-                  src={p.cover_image_path}
-                  alt={p.title || 'Gambar artikel'}
-                  width="400"
-                  height="160"
-                  loading="lazy"
-                  className="h-40 w-full object-cover"
-                />
-              )}
+              {name}
+            </button>
+          ))}
+        </div>
 
-              <div className="flex flex-1 flex-col p-4">
-                <span className="mb-2 w-fit rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">
-                  {p.category || 'Umum'}
-                </span>
-
-                <h2 className="mb-1 text-lg font-semibold">
-                  {p.title}
-                </h2>
-
-                <p className="mb-3 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                  {p.excerpt || ''}
-                </p>
-
-                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                  <span>
-                    {authorName} &middot;{' '}
-                    {p.published_at ? formatDate(p.published_at) : '-'}
-                  </span>
-
-                  <span className="flex items-center gap-1">
-                    <IconClock size={14} />
-                    {p.reading_time || 1} mnt baca
-                  </span>
-                </div>
+        <section aria-label="Daftar artikel" className="min-h-[24rem]">
+          {loading && (
+            <>
+              <p role="status" className="sr-only">Memuat artikel...</p>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+                {[0, 1, 2].map((i) => <div key={i} className="skeleton h-80" />)}
               </div>
-            </article>
-          )
-        })}
+            </>
+          )}
+          {!loading && error && (
+            <p role="alert" className="mx-auto max-w-xl rounded-xl bg-rose-100 p-4 text-center font-medium text-rose-900 dark:bg-rose-950 dark:text-rose-100">
+              {error}
+            </p>
+          )}
+          {!loading && !error && posts.length === 0 && (
+            <div className="grid place-items-center gap-2 py-16 text-center">
+              <IconArticleOff size={48} className="text-slate-500" aria-hidden="true" />
+              <p className="m-0 text-lg font-semibold">Belum ada artikel yang cocok.</p>
+              <p className="m-0 muted">Coba kata kunci atau kategori lain.</p>
+            </div>
+          )}
+          {!loading && !error && posts.length > 0 && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((p) => <PostCard key={p.id} post={p} />)}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   )
 }
-

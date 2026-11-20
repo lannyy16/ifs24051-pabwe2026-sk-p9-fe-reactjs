@@ -17,8 +17,7 @@ describe('AuthModal', () => {
     login.mockResolvedValue({ token: 't', user: {} })
     const onClose = vi.fn()
     const onAuthSuccess = vi.fn()
-    const navigate = vi.fn()
-    render(<AuthModal open onClose={onClose} onAuthSuccess={onAuthSuccess} navigate={navigate} />)
+    render(<AuthModal open onClose={onClose} onAuthSuccess={onAuthSuccess} />)
 
     await userEvent.type(document.getElementById('login-username'), 'member')
     await userEvent.type(document.getElementById('login-password'), 'member')
@@ -28,8 +27,8 @@ describe('AuthModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tutup' }))
     expect(onClose).toHaveBeenCalledTimes(1)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Daftar' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Daftar' }))
     expect(onClose).toHaveBeenCalledTimes(2)
-    expect(navigate).toHaveBeenCalledWith('/register')
+    expect(window.location.pathname).toBe('/register')
   })
 })

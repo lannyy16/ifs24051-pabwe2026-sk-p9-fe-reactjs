@@ -30,5 +30,6 @@ window.scrollTo = vi.fn()
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  window.history.pushState({}, '', '/')
   vi.clearAllMocks()
 })

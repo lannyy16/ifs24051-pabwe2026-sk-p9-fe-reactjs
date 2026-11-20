@@ -6,7 +6,6 @@ vi.mock('../../../helpers/apiHelper', () => ({ apiRequest: vi.fn(async () => ({ 
 
 describe('blogApi', () => {
   it('endpoint publik', async () => {
-    expect(await api.getCategories()).toBe('D')
     await api.getPublicPosts()
     expect(apiRequest).toHaveBeenLastCalledWith('/public/posts', { auth: false })
     await api.getPublicPosts({ q: 'go lang', category: 'Bisnis' })
@@ -30,6 +29,5 @@ describe('blogApi', () => {
     expect(apiRequest).toHaveBeenLastCalledWith('/posts/3', { method: 'DELETE' })
     expect(await api.aiGenerate({ topic: 'x' })).toBe('D')
     expect(apiRequest).toHaveBeenLastCalledWith('/posts/ai-generate', { method: 'POST', body: { topic: 'x' } })
-    expect(api.CATEGORIES).toHaveLength(6)
   })
 })

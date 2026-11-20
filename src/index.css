@@ -2,26 +2,81 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root { --accent: #4f46e5; --accent-soft: #eef2ff; }
-:root[data-accent="emerald"] { --accent: #047857; --accent-soft: #ecfdf5; }
-:root[data-accent="rose"] { --accent: #be123c; --accent-soft: #fff1f2; }
-:root[data-accent="amber"] { --accent: #b45309; --accent-soft: #fffbeb; }
+/* ---------- Token tema & aksen warna ---------- */
+:root {
+  color-scheme: light;
+  --accent: #4f46e5;
+  --accent-strong: #3730a3;
+  --accent-soft: #eef2ff;
+  --accent-ink: #4338ca;
+}
+:root.dark {
+  color-scheme: dark;
+  --accent-soft: #1e1b4b;
+  --accent-ink: #a5b4fc;
+}
+:root[data-accent="emerald"] { --accent: #047857; --accent-strong: #064e3b; --accent-soft: #ecfdf5; --accent-ink: #047857; }
+:root.dark[data-accent="emerald"] { --accent-soft: #022c22; --accent-ink: #6ee7b7; }
+:root[data-accent="rose"] { --accent: #be123c; --accent-strong: #881337; --accent-soft: #fff1f2; --accent-ink: #be123c; }
+:root.dark[data-accent="rose"] { --accent-soft: #4c0519; --accent-ink: #fda4af; }
+:root[data-accent="amber"] { --accent: #b45309; --accent-strong: #78350f; --accent-soft: #fffbeb; --accent-ink: #92400e; }
+:root.dark[data-accent="amber"] { --accent-soft: #451a03; --accent-ink: #fcd34d; }
 
 @theme inline {
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
 }
 
-body { @apply bg-slate-50 text-slate-800 antialiased; }
-.dark body { @apply bg-slate-900 text-slate-100; }
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+html.dark body { background: #0b1120; color: #f1f5f9; }
 
-/* Mode gelap: teks/tautan beraksen dan lencana dibuat kontras (WCAG AA, rasio >= 4.5:1). */
-.dark .text-accent { color: color-mix(in oklab, var(--accent) 40%, white); }
-.dark .bg-accent-soft { background-color: color-mix(in oklab, var(--accent) 30%, #1e293b); }
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; border-radius: 6px; }
 
-@utility btn { @apply inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-60 cursor-pointer; }
-@utility btn-primary { @apply btn bg-accent text-white hover:opacity-90; }
-@utility btn-ghost { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700; }
-@utility btn-danger { @apply btn bg-rose-700 text-white hover:bg-rose-800; }
-@utility input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 dark:border-slate-600 dark:bg-slate-800; }
-@utility card { @apply rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- Komponen ---------- */
+@utility btn {
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-white shadow-sm hover:bg-accent-strong;
+}
+@utility btn-ghost {
+  @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700;
+}
+@utility btn-danger {
+  @apply btn bg-rose-700 text-white hover:bg-rose-800;
+}
+@utility input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-accent focus:ring-4 focus:ring-accent/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400;
+}
+@utility card {
+  @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/80;
+}
+@utility badge {
+  @apply inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-ink;
+}
+@utility muted {
+  @apply text-slate-600 dark:text-slate-300;
+}
+@utility hero-bg {
+  background-image:
+    radial-gradient(60rem 24rem at 85% -20%, rgb(255 255 255 / 0.08), transparent 60%),
+    linear-gradient(135deg, var(--accent-strong), var(--accent));
+}
+@utility cover-bg {
+  background-image: linear-gradient(135deg, var(--accent), var(--accent-strong));
+}
+@utility skeleton {
+  @apply animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700;
+}

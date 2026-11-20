@@ -21,21 +21,30 @@ export const clearSession = () => {
   localStorage.removeItem(USER_KEY)
 }
 
+/** Alamat backend dari VITE_API_BASE_URL (tanpa slash di akhir); kosong => proxy Vite. */
+export const resolveBase = () => (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+
 /**
  * Wrapper fetch terpusat: menyuntikkan Bearer token dan mengurai respons standar
  * { status, message, data }. Melempar Error (dengan .status) jika gagal.
  */
 export async function apiRequest(path, { method = 'GET', body, auth = true } = {}) {
-  const base = import.meta.env.VITE_API_BASE_URL ?? ''
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()
   if (auth && token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(`${base}/api${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  let res
+  try {
+    res = await fetch(`${resolveBase()}/api${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch {
+    const err = new Error('Tidak dapat terhubung ke server')
+    err.status = 0
+    throw err
+  }
 
   let json
   try {

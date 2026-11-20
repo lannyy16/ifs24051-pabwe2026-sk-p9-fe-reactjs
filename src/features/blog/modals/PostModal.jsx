@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 import useInput from '../../../hooks/useInput'
-import MarkdownEditor from '../../../components/MarkdownEditor'
-import { CATEGORIES, createPost, updatePost } from '../api/blogApi'
+import { createPost, updatePost } from '../api/blogApi'
+import { CATEGORIES } from '../constants'
 import { showError, showSuccess } from '../../../helpers/toolsHelper'
+
+const MarkdownEditor = lazy(() => import('../../../components/MarkdownEditor'))
 
 function PostForm({ post, initial, onClose, onSaved }) {
   const source = post ?? initial ?? {}
@@ -37,21 +39,21 @@ function PostForm({ post, initial, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
-      <div className="card flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden">
-        <div className="flex items-center justify-between bg-accent px-5 py-3 text-white">
-          <h2 id="post-modal-title" className="text-lg font-semibold">{post ? 'Edit Artikel' : 'Tambah Artikel'}</h2>
-          <button type="button" aria-label="Tutup" onClick={onClose} className="cursor-pointer"><IconX size={22} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
+      <div className="card flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden shadow-2xl">
+        <div className="hero-bg flex items-center justify-between px-5 py-4 text-white">
+          <h2 id="post-modal-title" className="m-0 text-lg font-bold">{post ? 'Edit Artikel' : 'Tambah Artikel'}</h2>
+          <button type="button" aria-label="Tutup" onClick={onClose} className="rounded-lg p-1 hover:bg-white/20 cursor-pointer"><IconX size={22} aria-hidden="true" /></button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-2">
-              <label htmlFor="post-title" className="mb-1 block text-sm font-medium">Judul</label>
+              <label htmlFor="post-title" className="mb-1.5 block text-sm font-semibold">Judul</label>
               <input id="post-title" className="input" value={title} onChange={onTitle} />
             </div>
             <div>
-              <label htmlFor="post-category" className="mb-1 block text-sm font-medium">Kategori</label>
+              <label htmlFor="post-category" className="mb-1.5 block text-sm font-semibold">Kategori</label>
               <select id="post-category" className="input" value={category} onChange={onCategory}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -59,25 +61,27 @@ function PostForm({ post, initial, onClose, onSaved }) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="post-excerpt" className="mb-1 block text-sm font-medium">Ringkasan (opsional)</label>
+              <label htmlFor="post-excerpt" className="mb-1.5 block text-sm font-semibold">Ringkasan (opsional)</label>
               <input id="post-excerpt" className="input" value={excerpt} onChange={onExcerpt} />
             </div>
             <div>
-              <label htmlFor="post-cover" className="mb-1 block text-sm font-medium">URL Gambar Sampul (opsional)</label>
+              <label htmlFor="post-cover" className="mb-1.5 block text-sm font-semibold">URL Gambar Sampul (opsional)</label>
               <input id="post-cover" className="input" value={cover} onChange={onCover} />
             </div>
           </div>
           <div>
-            <span className="mb-1 block text-sm font-medium">Isi Artikel (Markdown)</span>
-            <MarkdownEditor value={content} onChange={setContent} />
+            <span className="mb-1.5 block text-sm font-semibold">Isi Artikel (Markdown)</span>
+            <Suspense fallback={<p className="text-slate-600 dark:text-slate-300">Memuat editor...</p>}>
+              <MarkdownEditor value={content} onChange={setContent} />
+            </Suspense>
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm font-medium">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
             Terbitkan sekarang
           </label>
         </div>
 
-        <div className="flex justify-end gap-2 bg-slate-100 px-5 py-3 dark:bg-slate-700">
+        <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-100 px-5 py-3 dark:border-slate-600 dark:bg-slate-900/60">
           <button type="button" className="btn-ghost" onClick={onClose}>Batal</button>
           <button type="button" className="btn-primary" onClick={save} disabled={saving}>
             {saving ? 'Menyimpan...' : 'Simpan'}

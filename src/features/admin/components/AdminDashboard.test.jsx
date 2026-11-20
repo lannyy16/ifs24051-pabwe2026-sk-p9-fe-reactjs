@@ -30,7 +30,7 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Total Artikel').nextSibling).toHaveTextContent('3')
     expect(screen.getByText('Total Terbit').nextSibling).toHaveTextContent('2')
     expect(screen.getByText('Seluruh Artikel')).toBeInTheDocument()
-    expect(screen.getByText('Terbit', { selector: 'td' })).toBeInTheDocument()
+    expect(screen.getByText('Terbit', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByText('Draf')).toBeInTheDocument()
   })
 

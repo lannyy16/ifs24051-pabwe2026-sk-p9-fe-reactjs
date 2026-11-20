@@ -1,7 +1,5 @@
 import { apiRequest } from '../../../helpers/apiHelper'
 
-export const getCategories = async () => (await apiRequest('/public/categories', { auth: false })).data
-
 export const getPublicPosts = async ({ q = '', category = '' } = {}) => {
   const params = new URLSearchParams()
   if (q) params.set('q', q)
@@ -23,5 +21,3 @@ export const togglePublish = async (id) =>
 export const deletePost = async (id) => apiRequest(`/posts/${id}`, { method: 'DELETE' })
 export const aiGenerate = async (payload) =>
   (await apiRequest('/posts/ai-generate', { method: 'POST', body: payload })).data
-
-export const CATEGORIES = ['Teknologi', 'Pendidikan', 'Gaya Hidup', 'Bisnis', 'Opini', 'Umum']
