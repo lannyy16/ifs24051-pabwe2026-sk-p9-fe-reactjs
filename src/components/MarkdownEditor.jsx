@@ -1,37 +1,31 @@
 import { useEffect, useRef } from 'react'
 import Editor from '@toast-ui/editor'
-import DOMPurify from 'dompurify'
 import '@toast-ui/editor/dist/toastui-editor.css'
 import '@toast-ui/editor/dist/theme/toastui-editor-dark.css'
 
-/** Wrapper Toast UI Editor (WYSIWYG/Markdown, preview, tema gelap). */
-export default function MarkdownEditor({ value = '', onChange, height = '420px' }) {
-  const rootRef = useRef(null)
-  const editorRef = useRef(null)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
+export default function MarkdownEditor({ value = '', onChange, theme = 'light' }) {
+  const elRef = useRef(null)
+  const latest = useRef({ value, onChange })
+
+  useEffect(() => {
+    latest.current = { value, onChange }
+  })
 
   useEffect(() => {
     const editor = new Editor({
-      el: rootRef.current,
-      height,
-      initialValue: value,
+      el: elRef.current,
+      height: '420px',
       initialEditType: 'markdown',
       previewStyle: 'tab',
+      initialValue: latest.current.value,
+      theme,
       usageStatistics: false,
-      customHTMLSanitizer: (html) => DOMPurify.sanitize(html),
-      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
-      events: { change: () => onChangeRef.current?.(editor.getMarkdown()) },
+      events: {
+        change: () => latest.current.onChange(editor.getMarkdown()),
+      },
     })
-    editorRef.current = editor
     return () => editor.destroy()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [theme])
 
-  useEffect(() => {
-    const editor = editorRef.current
-    if (editor && editor.getMarkdown() !== value) editor.setMarkdown(value)
-  }, [value])
-
-  return <div ref={rootRef} data-testid="markdown-editor" />
+  return <div ref={elRef} data-testid="markdown-editor" />
 }

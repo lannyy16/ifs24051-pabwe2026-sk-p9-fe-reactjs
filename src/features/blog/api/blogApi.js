@@ -1,23 +1,26 @@
-import { apiRequest } from '../../../helpers/apiHelper'
+import { apiData, apiList } from '../../../helpers/apiHelper'
 
-export const getPublicPosts = async ({ q = '', category = '' } = {}) => {
+export const fetchPublicPosts = ({ q = '', category = '' } = {}) => {
   const params = new URLSearchParams()
   if (q) params.set('q', q)
   if (category) params.set('category', category)
   const qs = params.toString()
-  return (await apiRequest(`/public/posts${qs ? `?${qs}` : ''}`, { auth: false })).data
+  return apiList(`/api/public/posts${qs ? `?${qs}` : ''}`)
 }
 
-export const getPublicPost = async (slug) =>
-  (await apiRequest(`/public/posts/${encodeURIComponent(slug)}`, { auth: false })).data
+export const fetchPublicPost = (slug) => apiData(`/api/public/posts/${encodeURIComponent(slug)}`)
 
-export const getMyPosts = async () => (await apiRequest('/posts')).data
-export const getStats = async () => (await apiRequest('/posts/stats')).data
-export const createPost = async (payload) => (await apiRequest('/posts', { method: 'POST', body: payload })).data
-export const updatePost = async (id, payload) =>
-  (await apiRequest(`/posts/${id}`, { method: 'PUT', body: payload })).data
-export const togglePublish = async (id) =>
-  (await apiRequest(`/posts/${id}/toggle-publish`, { method: 'PATCH' })).data
-export const deletePost = async (id) => apiRequest(`/posts/${id}`, { method: 'DELETE' })
-export const aiGenerate = async (payload) =>
-  (await apiRequest('/posts/ai-generate', { method: 'POST', body: payload })).data
+export const fetchMyPosts = () => apiList('/api/posts', { auth: true })
+
+export const fetchStats = () => apiData('/api/posts/stats', { auth: true })
+
+export const createPost = (payload) => apiData('/api/posts', { method: 'POST', body: payload, auth: true })
+
+export const updatePost = (id, payload) => apiData(`/api/posts/${id}`, { method: 'PUT', body: payload, auth: true })
+
+export const togglePublish = (id) => apiData(`/api/posts/${id}/toggle-publish`, { method: 'PATCH', auth: true })
+
+export const deletePost = (id) => apiData(`/api/posts/${id}`, { method: 'DELETE', auth: true })
+
+export const generateDraft = (payload) =>
+  apiData('/api/posts/ai-generate', { method: 'POST', body: payload, auth: true })

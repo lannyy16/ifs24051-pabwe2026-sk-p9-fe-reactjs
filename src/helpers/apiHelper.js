@@ -1,62 +1,38 @@
-const TOKEN_KEY = 'token'
-const USER_KEY = 'user'
+import { getToken } from './sessionHelper'
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
-export const getStoredUser = () => {
-  try {
-    return JSON.parse(localStorage.getItem(USER_KEY))
-  } catch {
-    return null
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
   }
 }
 
-export const saveSession = (token, user) => {
-  localStorage.setItem(TOKEN_KEY, token)
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
-}
-
-export const clearSession = () => {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
-}
-
-/** Alamat backend dari VITE_API_BASE_URL (tanpa slash di akhir); kosong => proxy Vite. */
-export const resolveBase = () => (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
-
-/**
- * Wrapper fetch terpusat: menyuntikkan Bearer token dan mengurai respons standar
- * { status, message, data }. Melempar Error (dengan .status) jika gagal.
- */
-export async function apiRequest(path, { method = 'GET', body, auth = true } = {}) {
-  const headers = { 'Content-Type': 'application/json' }
-  const token = getToken()
-  if (auth && token) headers.Authorization = `Bearer ${token}`
+export async function apiRequest(path, { method = 'GET', body, auth = false } = {}) {
+  const headers = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (auth) headers.Authorization = `Bearer ${getToken()}`
 
   let res
   try {
-    res = await fetch(`${resolveBase()}/api${path}`, {
+    res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    const err = new Error('Tidak dapat terhubung ke server')
-    err.status = 0
-    throw err
+    throw new ApiError('Tidak dapat terhubung ke server', 0)
   }
 
-  let json
-  try {
-    json = await res.json()
-  } catch {
-    json = { status: 'error', message: 'Respons server tidak valid' }
-  }
-
+  const json = await res.json().catch(() => ({}))
   if (!res.ok || json.status !== 'success') {
-    const err = new Error(json.message || 'Terjadi kesalahan')
-    err.status = res.status
-    throw err
+    throw new ApiError(json.message || 'Terjadi kesalahan pada server', res.status)
   }
   return json
 }
+
+export const apiData = async (path, options) => (await apiRequest(path, options)).data
+
+export const apiList = async (path, options) => (await apiRequest(path, options)).data || []

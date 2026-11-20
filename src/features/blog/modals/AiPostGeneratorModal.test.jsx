@@ -1,88 +1,91 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
+import { generateDraft } from '../api/blogApi'
 import AiPostGeneratorModal from './AiPostGeneratorModal'
-import { aiGenerate } from '../api/blogApi'
-import { showError } from '../../../helpers/toolsHelper'
 
-vi.mock('../api/blogApi', () => ({ CATEGORIES: ['Teknologi', 'Umum'], aiGenerate: vi.fn() }))
-vi.mock('../../../helpers/toolsHelper', () => ({ showError: vi.fn() }))
-vi.mock('../../../components/MarkdownViewer', () => ({ default: ({ content }) => <div data-testid="viewer">{content}</div> }))
-
-const result = (over = {}) => ({
-  title: 'Judul AI', category: 'Teknologi', excerpt: 'ringkas', content: '# konten',
-  used_web_search: true, sources: [{ title: 'Sumber 1', url: 'http://s1' }], ...over,
+vi.mock('../api/blogApi', () => ({ generateDraft: vi.fn() }))
+vi.mock('../../../components/MarkdownViewer', async () => {
+  const { createElement } = await import('react')
+  return { default: ({ content }) => createElement('div', { 'data-testid': 'viewer' }, content) }
 })
 
-const deferred = () => {
-  let resolve
-  const promise = new Promise((r) => { resolve = r })
-  return { promise, resolve }
+const draft = {
+  title: 'Draf Judul',
+  category: 'Teknologi',
+  excerpt: 'Draf ringkasan',
+  content: '# Draf isi',
+  sources: [{ title: 'Sumber 1', url: 'https://s1.test', snippet: 's' }],
 }
 
 describe('AiPostGeneratorModal', () => {
-  it('tidak merender saat tertutup', () => {
-    const { container } = render(<AiPostGeneratorModal open={false} />)
-    expect(container).toBeEmptyDOMElement()
+  it('menolak topik kosong', async () => {
+    render(<AiPostGeneratorModal onClose={vi.fn()} onApply={vi.fn()} />)
+    expect(screen.getByRole('dialog', { name: 'AI Blog Generator' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Draf' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Topik wajib diisi')
+    expect(generateDraft).not.toHaveBeenCalled()
   })
 
-  it('menolak topik terlalu pendek', async () => {
-    render(<AiPostGeneratorModal open onClose={vi.fn()} onApply={vi.fn()} />)
-    await userEvent.type(screen.getByLabelText('Topik Artikel'), 'ab')
-    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
-    expect(showError).toHaveBeenCalledWith('Topik minimal 3 karakter')
-    expect(aiGenerate).not.toHaveBeenCalled()
-  })
-
-  it('menghasilkan artikel dengan sumber, lalu menerapkannya', async () => {
-    aiGenerate.mockResolvedValue(result())
+  it('membuat draf dengan sumber lalu menerapkannya ke editor', async () => {
     const onApply = vi.fn()
-    render(<AiPostGeneratorModal open onClose={vi.fn()} onApply={onApply} />)
-
-    await userEvent.type(screen.getByLabelText('Topik Artikel'), 'Golang')
+    generateDraft.mockResolvedValueOnce(draft)
+    render(<AiPostGeneratorModal onClose={vi.fn()} onApply={onApply} />)
+    await userEvent.type(screen.getByLabelText('Topik artikel'), ' Golang ')
     await userEvent.selectOptions(screen.getByLabelText('Kategori'), 'Teknologi')
-    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
-
-    expect(await screen.findByText('Judul AI')).toBeInTheDocument()
-    expect(await screen.findByTestId('viewer')).toHaveTextContent('# konten')
-    expect(aiGenerate).toHaveBeenCalledWith({ topic: 'Golang', category: 'Teknologi', include_web_search: true })
-    expect(screen.getByText('Sumber 1')).toHaveAttribute('href', 'http://s1')
-
-    await userEvent.click(screen.getByRole('button', { name: 'Gunakan Artikel' }))
-    expect(onApply).toHaveBeenCalledWith(result())
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Draf' }))
+    expect(generateDraft).toHaveBeenCalledWith({ topic: 'Golang', category: 'Teknologi', include_web_search: true })
+    expect(await screen.findByText('Draf Judul')).toBeInTheDocument()
+    expect(screen.getByText('Draf ringkasan')).toBeInTheDocument()
+    expect(screen.getByTestId('viewer')).toHaveTextContent('# Draf isi')
+    expect(screen.getByRole('heading', { name: 'Sumber rujukan' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sumber 1' })).toHaveAttribute('href', 'https://s1.test')
+    await userEvent.click(screen.getByRole('button', { name: 'Terapkan ke Editor' }))
+    expect(onApply).toHaveBeenCalledWith(draft)
   })
 
-  it('tanpa penelusuran: tidak menampilkan sumber', async () => {
-    aiGenerate.mockResolvedValue(result({ used_web_search: false, sources: [] }))
-    render(<AiPostGeneratorModal open onClose={vi.fn()} onApply={vi.fn()} />)
-    await userEvent.type(screen.getByLabelText('Topik Artikel'), 'Golang')
-    await userEvent.click(screen.getByLabelText(/Sertakan penelusuran/))
-    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
-    expect(await screen.findByText('Judul AI')).toBeInTheDocument()
-    expect(aiGenerate).toHaveBeenCalledWith({ topic: 'Golang', category: '', include_web_search: false })
-    expect(screen.queryByText('Sumber Rujukan')).not.toBeInTheDocument()
+  it('dapat menonaktifkan search engine dan menangani draf tanpa sumber', async () => {
+    generateDraft.mockResolvedValueOnce({ ...draft, sources: undefined })
+    render(<AiPostGeneratorModal onClose={vi.fn()} onApply={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Topik artikel'), 'AI')
+    await userEvent.click(screen.getByLabelText('Sertakan penelusuran search engine'))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Draf' }))
+    await screen.findByText('Draf Judul')
+    expect(generateDraft).toHaveBeenCalledWith({ topic: 'AI', category: 'Umum', include_web_search: false })
+    expect(screen.queryByRole('heading', { name: 'Sumber rujukan' })).not.toBeInTheDocument()
   })
 
-  it('menampilkan status loading dan error', async () => {
-    const d = deferred()
-    aiGenerate.mockReturnValueOnce(d.promise)
-    render(<AiPostGeneratorModal open onClose={vi.fn()} onApply={vi.fn()} />)
-    await userEvent.type(screen.getByLabelText('Topik Artikel'), 'Golang')
-    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
-    expect(await screen.findByText('Menghasilkan...')).toBeInTheDocument()
-    d.resolve(result())
-    await screen.findByText('Judul AI')
-
-    aiGenerate.mockRejectedValueOnce(new Error('AI mati'))
-    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('AI mati'))
+  it('draf dengan daftar sumber kosong tidak menampilkan bagian sumber', async () => {
+    generateDraft.mockResolvedValueOnce({ ...draft, sources: [] })
+    render(<AiPostGeneratorModal onClose={vi.fn()} onApply={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Topik artikel'), 'AI')
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Draf' }))
+    await screen.findByText('Draf Judul')
+    expect(screen.queryByRole('heading', { name: 'Sumber rujukan' })).not.toBeInTheDocument()
   })
 
-  it('menutup modal', async () => {
+  it('menampilkan status memuat lalu error', async () => {
+    let reject
+    generateDraft.mockReturnValueOnce(new Promise((_, r) => (reject = r)))
+    render(<AiPostGeneratorModal onClose={vi.fn()} onApply={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Topik artikel'), 'AI')
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Draf' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Membuat draf artikel')
+    expect(screen.getByRole('button', { name: 'Generate Draf' })).toBeDisabled()
+    await act(async () => reject(new Error('OpenAI gagal')))
+    expect(await screen.findByRole('alert')).toHaveTextContent('OpenAI gagal')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('menutup lewat Batal dan Escape', async () => {
     const onClose = vi.fn()
-    render(<AiPostGeneratorModal open onClose={onClose} onApply={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Tutup' }))
+    const { unmount } = render(<AiPostGeneratorModal onClose={onClose} onApply={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: 'Batal' }))
+    await userEvent.keyboard('x')
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(2)
+    unmount()
+    await userEvent.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 })

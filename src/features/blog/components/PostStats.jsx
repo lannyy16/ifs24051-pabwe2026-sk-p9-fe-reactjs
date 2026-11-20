@@ -1,13 +1,23 @@
-import { IconFileText, IconPencil, IconWorldUpload } from '@tabler/icons-react'
-import StatCard from '../../../components/StatCard'
+const ZERO = { total_articles: 0, total_selesai: 0, belum_selesai: 0 }
 
-/** 3 kartu statistik: Total Artikel, Total Terbit, Belum Selesai (Draf). */
 export default function PostStats({ stats }) {
+  const s = stats || ZERO
+  const items = [
+    ['Total Artikel', s.total_articles],
+    ['Terbit', s.total_selesai],
+    ['Draf', s.belum_selesai],
+  ]
   return (
-    <section aria-label="Statistik artikel" className="grid gap-4 sm:grid-cols-3">
-      <StatCard label="Total Artikel" value={stats.total_articles} icon={IconFileText} />
-      <StatCard label="Total Terbit" value={stats.total_selesai} icon={IconWorldUpload} />
-      <StatCard label="Belum Selesai (Draf)" value={stats.belum_selesai} icon={IconPencil} />
+    <section aria-label="Ringkasan statistik artikel" className="grid gap-4 sm:grid-cols-3">
+      {items.map(([label, value]) => (
+        <div
+          key={label}
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+        >
+          <p className="m-0 text-sm font-medium text-slate-600 dark:text-slate-300">{label}</p>
+          <p className="m-0 mt-1 text-3xl font-bold text-slate-900 dark:text-white">{value}</p>
+        </div>
+      ))}
     </section>
   )
 }

@@ -1,19 +1,27 @@
-import { describe, expect, it, vi } from 'vitest'
-import { apiRequest } from '../../../helpers/apiHelper'
-import { getProfile, login, logout, register, updateProfile } from './authApi'
+import { vi } from 'vitest'
+import { apiData, apiRequest } from '../../../helpers/apiHelper'
+import { getProfile, login, logout, register } from './authApi'
 
-vi.mock('../../../helpers/apiHelper', () => ({ apiRequest: vi.fn(async () => ({ data: 'D' })) }))
+vi.mock('../../../helpers/apiHelper', () => ({ apiData: vi.fn(), apiRequest: vi.fn() }))
 
 describe('authApi', () => {
-  it('memanggil endpoint yang tepat', async () => {
-    expect(await login('u', 'p')).toBe('D')
-    expect(apiRequest).toHaveBeenCalledWith('/auth/login', { method: 'POST', body: { username: 'u', password: 'p' }, auth: false })
-    expect(await register({ a: 1 })).toBe('D')
-    expect(apiRequest).toHaveBeenCalledWith('/auth/register', { method: 'POST', body: { a: 1 }, auth: false })
-    await logout()
-    expect(apiRequest).toHaveBeenCalledWith('/auth/logout', { method: 'POST' })
-    expect(await getProfile()).toBe('D')
-    expect(await updateProfile({ b: 2 })).toBe('D')
-    expect(apiRequest).toHaveBeenCalledWith('/auth/profile', { method: 'PUT', body: { b: 2 } })
+  it('login', () => {
+    login({ username: 'a', password: 'b' })
+    expect(apiData).toHaveBeenCalledWith('/api/auth/login', { method: 'POST', body: { username: 'a', password: 'b' } })
+  })
+
+  it('register', () => {
+    register({ username: 'a' })
+    expect(apiData).toHaveBeenCalledWith('/api/auth/register', { method: 'POST', body: { username: 'a' } })
+  })
+
+  it('logout', () => {
+    logout()
+    expect(apiRequest).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST', auth: true })
+  })
+
+  it('getProfile', () => {
+    getProfile()
+    expect(apiData).toHaveBeenCalledWith('/api/auth/profile', { auth: true })
   })
 })

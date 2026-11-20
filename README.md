@@ -1,51 +1,37 @@
-# ifs24051-pabwe2026-sk-p9-fe-reactjs
+# Delcom Blog - Frontend (ReactJS + Vite)
 
-Frontend **Delcom Blog**: ReactJS (Vite) SPA multi-tier: Publik, Penulis, Admin.
-Tailwind CSS v4 · Toast UI Editor · SweetAlert2 · Vitest. Port lokal **5174**.
+Praktikum PABWE 2026 P9 - Studi Kasus. Frontend SPA multi-tier (Publik, Penulis, Admin) yang mengonsumsi
+backend `ifs24037-pabwe2026-sk-p9-be-golang-gin`.
 
-## Menjalankan lokal
+## Menjalankan (development)
 
 ```bash
 npm install
-npm run dev        # http://localhost:5174  (proxy /api -> http://localhost:8081)
+npm run dev          # http://localhost:5174, proxy /api -> http://localhost:8081
 ```
 
-Untuk development lokal, kosongkan `VITE_API_BASE_URL` (buat `.env.local` berisi `VITE_API_BASE_URL=`).
-Akun bawaan backend: `admin / admin` dan `member / member`.
-
-## Menghubungkan ke backend
-
-`.env.production` berisi `VITE_API_BASE_URL` (URL backend, tanpa slash di akhir; default
-`https://ifs24051-pabwe2026-sk-p9-be-golang-gin.s1if.cloud`). **Ganti** bila URL backend Anda berbeda,
-lalu commit dan deploy ulang (variabel dibaca saat `npm run build`). Backend harus sudah hidup lebih dulu.
-
-## Pengujian (100% Statements / Branches / Functions / Lines)
+## Pengujian (Vitest, threshold coverage 100%)
 
 ```bash
 npm test
 ```
 
+## Build & Deploy (Vercel)
+
+URL backend sudah diatur di `.env.production` (`VITE_API_BASE_URL`), sehingga `npm run build` langsung memakainya. Untuk mengganti, ubah file tersebut atau set env var di Vercel:
+
+```bash
+npm run build        # hasil di dist/
+```
+
+`vercel.json` sudah berisi rewrite SPA sehingga refresh di `/author`, `/admin`, `/posts/:slug` tidak 404.
+
 ## Rute
 
-| Path | Tampilan | Akses |
-|---|---|---|
-| `/`, `/public`, `/posts` | Hero, pencarian, filter kategori, galeri artikel | Publik |
-| `/posts/:slug` | Detail artikel (Markdown) | Publik |
-| `/login`, `/register` | Form `login-username`, `login-password`, `login-submit` | Publik |
-| `/dashboard` (alias `/author`) | Ruang kerja penulis | Login |
-| `/posts/create` | Dashboard dengan form tambah artikel terbuka | Login |
-| `/admin` | Panel admin | Admin |
-
-## Performa & aksesibilitas
-
-- CSS utama disisipkan ke `index.html` saat build (tanpa stylesheet yang memblokir render).
-- Editor/viewer Markdown, SweetAlert2, dan dashboard dimuat malas (code-splitting).
-- `vercel.json`: SPA rewrite + `Cache-Control: immutable` untuk `/assets/*`.
-- Kontras WCAG AA di mode terang & gelap, landmark `main`/`header`/`footer`, satu `h1` per halaman,
-  judul halaman dan meta description dinamis (`usePageMeta`), tautan navigasi berupa `<a href>`.
-- `@toast-ui/editor` membundel DOMPurify lama; aplikasi memakai `dompurify` terbaru sebagai `customHTMLSanitizer`.
-
-## CI/CD (Jenkins / Delcom)
-
-`Jenkinsfile`: Checkout, Install (`npm ci`), Test (Vitest, threshold 100%), Build, Trivy, Package, Publish, Deploy.
-Image Node memakai `node:22-bookworm-slim` (glibc) agar parser native Rollup berjalan benar.
+| Path | Akses | Keterangan |
+| --- | --- | --- |
+| `/` atau `/public` | Publik | Galeri artikel, pencarian, filter kategori |
+| `/posts/:slug` | Publik | Detail artikel (Markdown) |
+| `/login`, `/register` | Publik | Form dengan `#login-username`, `#login-password`, `#login-submit` |
+| `/author` | Login | Workspace penulis (CRUD, toggle terbit, AI generator) |
+| `/admin` | Admin | Monitoring pengguna dan artikel |

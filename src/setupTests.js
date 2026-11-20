@@ -1,35 +1,29 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import { afterEach, beforeEach, vi } from 'vitest'
 
-// Polyfill JSDOM untuk Toast UI Editor (matchMedia, selection, range, canvas).
-if (!window.matchMedia) {
-  window.matchMedia = (query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  })
-}
-if (!document.createRange) {
-  document.createRange = () => ({
-    setStart: () => {},
-    setEnd: () => {},
-    commonAncestorContainer: document.body,
-    getBoundingClientRect: () => ({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }),
-    getClientRects: () => [],
-  })
-}
-HTMLCanvasElement.prototype.getContext = vi.fn(() => null)
-window.scrollTo = vi.fn()
+vi.mock('@tabler/icons-react', async () => {
+  const { createElement } = await import('react')
+  const make = (name) => (props) => createElement('svg', { 'data-icon': name, ...props })
+  return {
+    IconDotsVertical: make('dots'),
+    IconMoon: make('moon'),
+    IconPlus: make('plus'),
+    IconSparkles: make('sparkles'),
+    IconSun: make('sun'),
+  }
+})
+
+vi.mock('sweetalert2', () => ({
+  default: { fire: vi.fn().mockResolvedValue({ isConfirmed: true }) },
+}))
+
+beforeEach(() => {
+  window.scrollTo = vi.fn()
+  window.history.replaceState({}, '', '/')
+})
 
 afterEach(() => {
-  cleanup()
   localStorage.clear()
-  window.history.pushState({}, '', '/')
+  document.documentElement.classList.remove('dark')
   vi.clearAllMocks()
 })

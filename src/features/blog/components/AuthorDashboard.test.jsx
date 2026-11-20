@@ -1,146 +1,187 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import Swal from 'sweetalert2'
+import { vi } from 'vitest'
+import { deletePost, fetchMyPosts, fetchStats, togglePublish } from '../api/blogApi'
 import AuthorDashboard from './AuthorDashboard'
-import { deletePost, getMyPosts, getStats, togglePublish } from '../api/blogApi'
-import { confirmDelete, showError, showSuccess } from '../../../helpers/toolsHelper'
 
 vi.mock('../api/blogApi', () => ({
-  getMyPosts: vi.fn(), getStats: vi.fn(), togglePublish: vi.fn(), deletePost: vi.fn(),
+  fetchMyPosts: vi.fn(),
+  fetchStats: vi.fn(),
+  togglePublish: vi.fn(),
+  deletePost: vi.fn(),
 }))
-vi.mock('../../../helpers/toolsHelper', () => ({
-  confirmDelete: vi.fn(), formatDate: () => '1 Januari 2026', showError: vi.fn(), showSuccess: vi.fn(),
-}))
-vi.mock('../modals/PostModal', () => ({
-  default: ({ open, post, initial, onClose, onSaved }) =>
-    open ? (
-      <div data-testid="post-modal">
-        <span>{post ? `edit:${post.title}` : 'new'}</span>
-        <span>{initial ? `initial:${initial.title}` : 'noinitial'}</span>
-        <button onClick={onSaved}>saved</button>
-        <button onClick={onClose}>close-post</button>
-      </div>
-    ) : null,
-}))
-vi.mock('../modals/AiPostGeneratorModal', () => ({
-  default: ({ open, onClose, onApply }) =>
-    open ? (
-      <div data-testid="ai-modal">
-        <button onClick={() => onApply({ title: 'Hasil AI' })}>apply</button>
-        <button onClick={onClose}>close-ai</button>
-      </div>
-    ) : null,
-}))
+vi.mock('../modals/PostModal', async () => {
+  const { createElement: h } = await import('react')
+  return {
+    default: (props) =>
+      h(
+        'div',
+        { 'data-testid': 'post-modal' },
+        h('span', null, `post:${props.post ? props.post.title : 'baru'}`),
+        h('span', null, `draft:${props.draft ? props.draft.title : 'kosong'}`),
+        h('button', { onClick: props.onClose }, 'tutup-post'),
+        h('button', { onClick: props.onSaved }, 'simpan-post'),
+      ),
+  }
+})
+vi.mock('../modals/AiPostGeneratorModal', async () => {
+  const { createElement: h } = await import('react')
+  return {
+    default: (props) =>
+      h(
+        'div',
+        { 'data-testid': 'ai-modal' },
+        h('button', { onClick: props.onClose }, 'tutup-ai'),
+        h('button', { onClick: () => props.onApply({ title: 'Draf AI' }) }, 'terapkan-ai'),
+      ),
+  }
+})
 
-const published = { id: 1, slug: 'pub', title: 'Artikel Satu', category: 'Umum', is_published: true, created_at: '2026-01-01' }
-const draft = { id: 2, slug: 'drf', title: 'Draf Dua', category: 'Bisnis', is_published: false, created_at: '2026-01-01' }
+const posts = [
+  { id: 1, title: 'Artikel Terbit', slug: 'artikel-terbit', category: 'Teknologi', is_published: true, created_at: '2026-11-01T12:00:00Z' },
+  { id: 2, title: 'Artikel Draf', slug: 'artikel-draf', category: 'Umum', is_published: false, created_at: '2026-11-02T12:00:00Z' },
+]
+const stats = { total_articles: 2, total_selesai: 1, belum_selesai: 1 }
+
+const setup = async () => {
+  const onSessionExpired = vi.fn()
+  render(<AuthorDashboard theme="light" onSessionExpired={onSessionExpired} />)
+  await screen.findByText('Artikel Terbit')
+  return { onSessionExpired }
+}
 
 beforeEach(() => {
-  getMyPosts.mockResolvedValue([published, draft])
-  getStats.mockResolvedValue({ total_articles: 2, total_selesai: 1, belum_selesai: 1 })
+  fetchMyPosts.mockResolvedValue(posts)
+  fetchStats.mockResolvedValue(stats)
 })
 
 describe('AuthorDashboard', () => {
-  it('memuat statistik dan tabel artikel', async () => {
-    render(<AuthorDashboard />)
-    expect(screen.getByText('Memuat...')).toBeInTheDocument()
-    expect(await screen.findByText('Artikel Satu')).toBeInTheDocument()
+  it('menampilkan statistik dan tabel artikel', async () => {
+    await setup()
+    expect(screen.getByRole('heading', { level: 1, name: 'Workspace Penulis' })).toBeInTheDocument()
     expect(screen.getByText('Total Artikel').nextSibling).toHaveTextContent('2')
-    expect(screen.getByRole('switch', { name: 'Status terbit Artikel Satu' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('switch', { name: 'Status terbit Draf Dua' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('switch', { name: 'Terbit, ubah status Artikel Terbit' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('switch', { name: 'Draf, ubah status Artikel Draf' })).toHaveAttribute('aria-checked', 'false')
+    expect(document.title).toBe('Workspace Penulis | Delcom Blog')
   })
 
-  it('startCreate langsung membuka form tambah artikel', async () => {
-    render(<AuthorDashboard startCreate />)
-    expect(within(await screen.findByTestId('post-modal')).getByText('new')).toBeInTheDocument()
+  it('menampilkan pesan saat belum ada artikel', async () => {
+    fetchMyPosts.mockResolvedValue([])
+    render(<AuthorDashboard theme="light" onSessionExpired={vi.fn()} />)
+    expect(await screen.findByText('Anda belum menulis artikel.')).toBeInTheDocument()
   })
 
-  it('menampilkan kondisi kosong', async () => {
-    getMyPosts.mockResolvedValue([])
-    render(<AuthorDashboard />)
-    expect(await screen.findByText(/Belum ada artikel/)).toBeInTheDocument()
+  it('menampilkan error pemuatan', async () => {
+    fetchMyPosts.mockRejectedValue(Object.assign(new Error('Server error'), { status: 500 }))
+    render(<AuthorDashboard theme="light" onSessionExpired={vi.fn()} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server error')
   })
 
-  it('menampilkan error saat gagal memuat', async () => {
-    getMyPosts.mockRejectedValue(new Error('gagal muat'))
-    render(<AuthorDashboard />)
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('gagal muat'))
+  it('memanggil onSessionExpired saat token kedaluwarsa', async () => {
+    fetchMyPosts.mockRejectedValue(Object.assign(new Error('expired'), { status: 401 }))
+    const onSessionExpired = vi.fn()
+    render(<AuthorDashboard theme="light" onSessionExpired={onSessionExpired} />)
+    await waitFor(() => expect(onSessionExpired).toHaveBeenCalled())
   })
 
-  it('toggle status terbit: sukses dan gagal', async () => {
+  it('toggle status terbit memuat ulang data', async () => {
     togglePublish.mockResolvedValueOnce({})
-    render(<AuthorDashboard />)
-    await screen.findByText('Artikel Satu')
-    await userEvent.click(screen.getByRole('switch', { name: 'Status terbit Draf Dua' }))
-    await waitFor(() => expect(togglePublish).toHaveBeenCalledWith(2))
-    await waitFor(() => expect(getMyPosts).toHaveBeenCalledTimes(2))
-
-    togglePublish.mockRejectedValueOnce(new Error('toggle gagal'))
-    await userEvent.click(screen.getByRole('switch', { name: 'Status terbit Draf Dua' }))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('toggle gagal'))
+    await setup()
+    await userEvent.click(screen.getByRole('switch', { name: 'Draf, ubah status Artikel Draf' }))
+    expect(togglePublish).toHaveBeenCalledWith(2)
+    await waitFor(() => expect(fetchMyPosts).toHaveBeenCalledTimes(2))
   })
 
-  it('menu kebab: buka/tutup, Edit, dan Lihat hanya untuk artikel terbit', async () => {
-    render(<AuthorDashboard />)
-    await screen.findByText('Artikel Satu')
+  it('toggle gagal menampilkan dialog error, 401 mengakhiri sesi', async () => {
+    const { onSessionExpired } = await setup()
+    togglePublish.mockRejectedValueOnce(Object.assign(new Error('Tidak bisa'), { status: 500 }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Draf, ubah status Artikel Draf' }))
+    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'error', text: 'Tidak bisa' })))
+    expect(onSessionExpired).not.toHaveBeenCalled()
 
-    await userEvent.click(screen.getByLabelText('Menu Draf Dua'))
-    expect(screen.queryByText('Lihat')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByLabelText('Menu Draf Dua'))
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
+    togglePublish.mockRejectedValueOnce(Object.assign(new Error('expired'), { status: 401 }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Draf, ubah status Artikel Draf' }))
+    await waitFor(() => expect(onSessionExpired).toHaveBeenCalled())
+  })
 
-    await userEvent.click(screen.getByLabelText('Menu Artikel Satu'))
-    await userEvent.click(screen.getByRole('link', { name: 'Lihat' }))
-    expect(window.location.pathname).toBe('/posts/pub')
-    expect(screen.queryByRole('link', { name: 'Lihat' })).not.toBeInTheDocument()
+  it('menu kebab: buka, tutup, dan isi menu sesuai status', async () => {
+    await setup()
+    const kebabPublished = screen.getByRole('button', { name: 'Menu aksi Artikel Terbit' })
+    await userEvent.click(kebabPublished)
+    expect(kebabPublished).toHaveAttribute('aria-expanded', 'true')
+    const menu = screen.getByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Lihat' })).toHaveAttribute('href', '/posts/artikel-terbit')
+    expect(within(menu).getByRole('menuitem', { name: 'Hapus' })).toBeInTheDocument()
+    await userEvent.click(kebabPublished)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByLabelText('Menu Artikel Satu'))
-    await userEvent.click(screen.getByText('Edit'))
-    expect(within(screen.getByTestId('post-modal')).getByText('edit:Artikel Satu')).toBeInTheDocument()
-    await userEvent.click(screen.getByText('close-post'))
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Draf' }))
+    expect(within(screen.getByRole('menu')).queryByRole('menuitem', { name: 'Lihat' })).not.toBeInTheDocument()
+  })
+
+  it('Lihat menuju halaman artikel', async () => {
+    await setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Terbit' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Lihat' }))
+    expect(window.location.pathname).toBe('/posts/artikel-terbit')
+  })
+
+  it('Edit membuka modal, simpan memuat ulang data', async () => {
+    await setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Terbit' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+    expect(await screen.findByText('post:Artikel Terbit')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'tutup-post' }))
     expect(screen.queryByTestId('post-modal')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tambah Artikel' }))
+    expect(await screen.findByText('post:baru')).toBeInTheDocument()
+    expect(screen.getByText('draft:kosong')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'simpan-post' }))
+    expect(screen.queryByTestId('post-modal')).not.toBeInTheDocument()
+    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'success' })))
+    await waitFor(() => expect(fetchMyPosts).toHaveBeenCalledTimes(2))
   })
 
-  it('hapus artikel: dibatalkan, sukses, dan gagal', async () => {
-    render(<AuthorDashboard />)
-    await screen.findByText('Artikel Satu')
+  it('AI Generator: tutup dan terapkan draf ke editor', async () => {
+    await setup()
+    await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
+    expect(await screen.findByTestId('ai-modal')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'tutup-ai' }))
+    expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
 
-    confirmDelete.mockResolvedValueOnce(false)
-    await userEvent.click(screen.getByLabelText('Menu Artikel Satu'))
-    await userEvent.click(screen.getByText('Hapus'))
+    await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'terapkan-ai' }))
+    expect(await screen.findByText('draft:Draf AI')).toBeInTheDocument()
+    expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
+  })
+
+  it('hapus artikel setelah konfirmasi', async () => {
+    deletePost.mockResolvedValueOnce(null)
+    await setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Draf' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Hapus' }))
+    await waitFor(() => expect(deletePost).toHaveBeenCalledWith(2))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await waitFor(() => expect(fetchMyPosts).toHaveBeenCalledTimes(2))
+  })
+
+  it('tidak menghapus bila dibatalkan', async () => {
+    await setup()
+    Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Draf' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Hapus' }))
+    await waitFor(() => expect(Swal.fire).toHaveBeenCalled())
     expect(deletePost).not.toHaveBeenCalled()
-
-    confirmDelete.mockResolvedValueOnce(true)
-    deletePost.mockResolvedValueOnce({})
-    await userEvent.click(screen.getByLabelText('Menu Artikel Satu'))
-    await userEvent.click(screen.getByText('Hapus'))
-    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('Artikel berhasil dihapus'))
-    expect(deletePost).toHaveBeenCalledWith(1)
-
-    confirmDelete.mockResolvedValueOnce(true)
-    deletePost.mockRejectedValueOnce(new Error('hapus gagal'))
-    await userEvent.click(screen.getByLabelText('Menu Artikel Satu'))
-    await userEvent.click(screen.getByText('Hapus'))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('hapus gagal'))
   })
 
-  it('Tambah Artikel, AI Generator → terapkan ke editor, dan simpan memuat ulang', async () => {
-    render(<AuthorDashboard />)
-    await screen.findByText('Artikel Satu')
-
-    await userEvent.click(screen.getByRole('button', { name: /Tambah Artikel/ }))
-    expect(within(screen.getByTestId('post-modal')).getByText('new')).toBeInTheDocument()
-    await userEvent.click(screen.getByText('saved'))
-    expect(screen.queryByTestId('post-modal')).not.toBeInTheDocument()
-    await waitFor(() => expect(getMyPosts).toHaveBeenCalledTimes(2))
-
-    await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
-    await userEvent.click(screen.getByText('close-ai'))
-    expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /AI Generator/ }))
-    await userEvent.click(screen.getByText('apply'))
-    expect(screen.queryByTestId('ai-modal')).not.toBeInTheDocument()
-    expect(within(screen.getByTestId('post-modal')).getByText('initial:Hasil AI')).toBeInTheDocument()
+  it('hapus gagal menampilkan error', async () => {
+    deletePost.mockRejectedValueOnce(Object.assign(new Error('Gagal hapus'), { status: 500 }))
+    await setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Menu aksi Artikel Draf' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Hapus' }))
+    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'error', text: 'Gagal hapus' })))
   })
 })

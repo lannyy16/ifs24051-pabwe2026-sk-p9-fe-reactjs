@@ -1,106 +1,106 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
-import PostModal from './PostModal'
+import { vi } from 'vitest'
 import { createPost, updatePost } from '../api/blogApi'
-import { showError, showSuccess } from '../../../helpers/toolsHelper'
+import PostModal from './PostModal'
 
-vi.mock('../api/blogApi', () => ({
-  CATEGORIES: ['Teknologi', 'Umum'],
-  createPost: vi.fn(),
-  updatePost: vi.fn(),
-}))
-vi.mock('../../../helpers/toolsHelper', () => ({ showError: vi.fn(), showSuccess: vi.fn() }))
-vi.mock('../../../components/MarkdownEditor', () => ({
-  default: ({ value, onChange }) => (
-    <textarea aria-label="editor" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-}))
+vi.mock('../api/blogApi', () => ({ createPost: vi.fn(), updatePost: vi.fn() }))
+vi.mock('../../../components/MarkdownEditor', async () => {
+  const { createElement } = await import('react')
+  return {
+    default: ({ value, onChange }) =>
+      createElement('textarea', { 'aria-label': 'Konten', value, onChange: (e) => onChange(e.target.value) }),
+  }
+})
 
-const deferred = () => {
-  let resolve
-  const promise = new Promise((r) => { resolve = r })
-  return { promise, resolve }
-}
+const handlers = () => ({ onClose: vi.fn(), onSaved: vi.fn() })
 
 describe('PostModal', () => {
-  it('tidak merender saat tertutup', () => {
-    const { container } = render(<PostModal open={false} />)
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('membuat artikel baru dengan seluruh kolom', async () => {
-    createPost.mockResolvedValue({})
-    const onSaved = vi.fn()
-    render(<PostModal open post={null} initial={null} onClose={vi.fn()} onSaved={onSaved} />)
-    expect(screen.getByText('Tambah Artikel')).toBeInTheDocument()
-
-    await userEvent.type(screen.getByLabelText('Judul'), 'Judul Baru')
-    await userEvent.selectOptions(screen.getByLabelText('Kategori'), 'Teknologi')
-    await userEvent.type(screen.getByLabelText('Ringkasan (opsional)'), 'ringkas')
-    await userEvent.type(screen.getByLabelText('URL Gambar Sampul (opsional)'), 'http://c')
-    await userEvent.type(await screen.findByLabelText('editor'), 'isi')
-    await userEvent.click(screen.getByLabelText('Terbitkan sekarang'))
+  it('menolak simpan bila judul/konten kosong', async () => {
+    const h = handlers()
+    render(<PostModal theme="light" {...h} />)
+    expect(screen.getByRole('dialog', { name: 'Tambah Artikel' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-
-    await waitFor(() => expect(onSaved).toHaveBeenCalled())
-    expect(createPost).toHaveBeenCalledWith({
-      title: 'Judul Baru', category: 'Teknologi', excerpt: 'ringkas', content: 'isi',
-      cover_image_path: 'http://c', is_published: true,
-    })
-    expect(showSuccess).toHaveBeenCalledWith('Artikel berhasil dibuat')
-  })
-
-  it('menolak simpan bila judul / isi kosong', async () => {
-    render(<PostModal open post={null} initial={null} onClose={vi.fn()} onSaved={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-    expect(showError).toHaveBeenCalledWith('Judul dan isi artikel wajib diisi')
+    expect(screen.getByRole('alert')).toHaveTextContent('Judul dan konten artikel wajib diisi')
     expect(createPost).not.toHaveBeenCalled()
   })
 
+  it('membuat artikel baru', async () => {
+    const h = handlers()
+    createPost.mockResolvedValueOnce({})
+    render(<PostModal theme="light" {...h} />)
+    await userEvent.type(screen.getByLabelText('Judul'), ' Judul Baru ')
+    await userEvent.selectOptions(screen.getByLabelText('Kategori'), 'Bisnis')
+    await userEvent.type(screen.getByLabelText('Ringkasan'), 'Ringkas')
+    await userEvent.type(screen.getByLabelText('URL gambar sampul'), 'https://img.test/a.png')
+    await userEvent.type(screen.getByLabelText('Konten'), 'isi')
+    await userEvent.click(screen.getByLabelText('Terbitkan artikel'))
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(h.onSaved).toHaveBeenCalled())
+    expect(createPost).toHaveBeenCalledWith({
+      title: 'Judul Baru',
+      category: 'Bisnis',
+      excerpt: 'Ringkas',
+      content: 'isi',
+      cover_image_path: 'https://img.test/a.png',
+      is_published: true,
+    })
+  })
+
   it('mengedit artikel yang ada', async () => {
-    updatePost.mockResolvedValue({})
+    const h = handlers()
+    updatePost.mockResolvedValueOnce({})
     const post = {
-      id: 9, title: 'Lama', category: 'Teknologi', excerpt: 'e', cover_image_path: 'c', content: 'isi lama', is_published: true,
+      id: 5,
+      title: 'Lama',
+      category: 'Opini',
+      excerpt: 'e',
+      content: 'c',
+      cover_image_path: '',
+      is_published: true,
     }
-    const onSaved = vi.fn()
-    render(<PostModal open post={post} initial={null} onClose={vi.fn()} onSaved={onSaved} />)
-    expect(screen.getByText('Edit Artikel')).toBeInTheDocument()
+    render(<PostModal post={post} theme="dark" {...h} />)
+    expect(screen.getByRole('dialog', { name: 'Edit Artikel' })).toBeInTheDocument()
     expect(screen.getByLabelText('Judul')).toHaveValue('Lama')
-    expect(screen.getByLabelText('Terbitkan sekarang')).toBeChecked()
-
+    expect(screen.getByLabelText('Kategori')).toHaveValue('Opini')
+    expect(screen.getByLabelText('Terbitkan artikel')).toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-    await waitFor(() => expect(onSaved).toHaveBeenCalled())
-    expect(updatePost).toHaveBeenCalledWith(9, expect.objectContaining({ title: 'Lama', content: 'isi lama' }))
-    expect(showSuccess).toHaveBeenCalledWith('Artikel berhasil diperbarui')
+    await waitFor(() => expect(h.onSaved).toHaveBeenCalled())
+    expect(updatePost).toHaveBeenCalledWith(5, expect.objectContaining({ title: 'Lama', is_published: true }))
+    expect(createPost).not.toHaveBeenCalled()
   })
 
-  it('terisi otomatis dari hasil AI (initial)', async () => {
-    render(<PostModal open post={null} initial={{ title: 'Dari AI', content: 'konten AI', category: 'Umum' }} onClose={vi.fn()} onSaved={vi.fn()} />)
-    expect(screen.getByLabelText('Judul')).toHaveValue('Dari AI')
-    expect(await screen.findByLabelText('editor')).toHaveValue('konten AI')
+  it('memakai draf AI sebagai nilai awal artikel baru', async () => {
+    const h = handlers()
+    createPost.mockResolvedValueOnce({})
+    render(<PostModal draft={{ title: 'Draf AI', category: 'Teknologi', excerpt: 'x', content: 'isi AI' }} theme="light" {...h} />)
+    expect(screen.getByLabelText('Judul')).toHaveValue('Draf AI')
+    expect(screen.getByLabelText('Terbitkan artikel')).not.toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(createPost).toHaveBeenCalled())
   })
 
-  it('menampilkan error API dan status menyimpan', async () => {
-    const d = deferred()
-    createPost.mockReturnValueOnce(d.promise)
-    const onSaved = vi.fn()
-    render(<PostModal open post={null} initial={{ title: 'T', content: 'C' }} onClose={vi.fn()} onSaved={onSaved} />)
+  it('menampilkan error API dan dapat mencoba lagi', async () => {
+    const h = handlers()
+    createPost.mockRejectedValueOnce(new Error('Gagal membuat artikel'))
+    render(<PostModal draft={{ title: 'T', content: 'C' }} theme="light" {...h} />)
     await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-    expect(await screen.findByText('Menyimpan...')).toBeInTheDocument()
-    createPost.mockRejectedValueOnce(new Error('gagal simpan'))
-    d.resolve({})
-    await waitFor(() => expect(onSaved).toHaveBeenCalled())
-
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('gagal simpan'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Gagal membuat artikel')
+    expect(screen.getByRole('button', { name: 'Simpan' })).toBeEnabled()
+    expect(h.onSaved).not.toHaveBeenCalled()
   })
 
-  it('menutup lewat tombol X dan Batal', async () => {
-    const onClose = vi.fn()
-    render(<PostModal open post={null} initial={null} onClose={onClose} onSaved={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Tutup' }))
+  it('menutup lewat tombol Batal dan tombol Escape', async () => {
+    const h = handlers()
+    const { unmount } = render(<PostModal theme="light" {...h} />)
     await userEvent.click(screen.getByRole('button', { name: 'Batal' }))
-    expect(onClose).toHaveBeenCalledTimes(2)
+    expect(h.onClose).toHaveBeenCalledTimes(1)
+    await userEvent.keyboard('a')
+    expect(h.onClose).toHaveBeenCalledTimes(1)
+    await userEvent.keyboard('{Escape}')
+    expect(h.onClose).toHaveBeenCalledTimes(2)
+    unmount()
+    await userEvent.keyboard('{Escape}')
+    expect(h.onClose).toHaveBeenCalledTimes(2)
   })
 })

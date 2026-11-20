@@ -1,91 +1,90 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
-import AuthPage from './AuthPage'
+import Swal from 'sweetalert2'
+import { vi } from 'vitest'
 import { login, register } from '../api/authApi'
-import { showError } from '../../../helpers/toolsHelper'
+import AuthPage from './AuthPage'
 
 vi.mock('../api/authApi', () => ({ login: vi.fn(), register: vi.fn() }))
-vi.mock('../../../helpers/toolsHelper', () => ({ showError: vi.fn() }))
-
-const deferred = () => {
-  let resolve
-  const promise = new Promise((r) => { resolve = r })
-  return { promise, resolve }
-}
 
 describe('AuthPage (login)', () => {
-  it('menyediakan id wajib dan mengirim kredensial', async () => {
-    login.mockResolvedValue({ token: 't', user: { id: 1 } })
-    const onAuthSuccess = vi.fn()
-    render(<AuthPage mode="login" onAuthSuccess={onAuthSuccess} />)
-
-    await userEvent.type(document.getElementById('login-username'), 'admin')
-    await userEvent.type(document.getElementById('login-password'), 'rahasia')
-    await userEvent.click(document.getElementById('login-submit'))
-
-    await waitFor(() => expect(onAuthSuccess).toHaveBeenCalledWith({ token: 't', user: { id: 1 } }))
-    expect(login).toHaveBeenCalledWith('admin', 'rahasia')
+  it('memakai id input yang diwajibkan modul', () => {
+    const { container } = render(<AuthPage mode="login" onSuccess={vi.fn()} />)
+    expect(container.querySelector('#login-username')).toBeInTheDocument()
+    expect(container.querySelector('#login-password')).toBeInTheDocument()
+    expect(container.querySelector('#login-submit')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Masuk ke Delcom Blog' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Daftar sekarang' })).toHaveAttribute('href', '/register')
+    expect(document.title).toBe('Masuk | Delcom Blog')
   })
 
-  it('menampilkan status memproses lalu error bila gagal', async () => {
-    const d = deferred()
-    login.mockReturnValueOnce(d.promise)
-    render(<AuthPage onAuthSuccess={vi.fn()} />)
-    await userEvent.type(document.getElementById('login-username'), 'a')
-    await userEvent.type(document.getElementById('login-password'), 'b')
-    await userEvent.click(document.getElementById('login-submit'))
-    expect(await screen.findByText('Memproses...')).toBeInTheDocument()
-
-    login.mockRejectedValueOnce(new Error('salah'))
-    d.resolve({ token: 't', user: {} })
-    await waitFor(() => expect(screen.getByText('Masuk', { selector: 'button#login-submit' })).toBeInTheDocument())
-
-    await userEvent.click(document.getElementById('login-submit'))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('salah'))
+  it('menolak form kosong', async () => {
+    render(<AuthPage mode="login" onSuccess={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Username dan password wajib diisi')
+    expect(login).not.toHaveBeenCalled()
   })
 
-  it('tautan beralih ke halaman daftar', async () => {
-    render(<AuthPage mode="login" onAuthSuccess={vi.fn()} />)
-    await userEvent.click(screen.getByRole('link', { name: 'Daftar' }))
-    expect(window.location.pathname).toBe('/register')
-    expect(document.title).toMatch(/Masuk/)
+  it('berhasil login', async () => {
+    const onSuccess = vi.fn()
+    login.mockResolvedValueOnce({ token: 't', user: { id: 1 } })
+    render(<AuthPage mode="login" onSuccess={onSuccess} />)
+    await userEvent.type(screen.getByLabelText('Username'), '  admin ')
+    await userEvent.type(screen.getByLabelText('Password'), 'rahasia')
+    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
+    expect(login).toHaveBeenCalledWith({ username: 'admin', password: 'rahasia' })
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ token: 't', user: { id: 1 } }))
+  })
+
+  it('menampilkan pesan error dan mengaktifkan tombol kembali', async () => {
+    login.mockRejectedValueOnce(new Error('Username atau password salah'))
+    render(<AuthPage mode="login" onSuccess={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Username'), 'a')
+    await userEvent.type(screen.getByLabelText('Password'), 'b')
+    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Username atau password salah')
+    expect(screen.getByRole('button', { name: 'Masuk' })).toBeEnabled()
   })
 })
 
 describe('AuthPage (register)', () => {
-  it('mendaftarkan penulis baru', async () => {
-    register.mockResolvedValue({ token: 't', user: { id: 2 } })
-    const onAuthSuccess = vi.fn()
-    render(<AuthPage mode="register" onAuthSuccess={onAuthSuccess} />)
-
-    await userEvent.type(document.getElementById('register-username'), 'budi')
-    await userEvent.type(document.getElementById('register-email'), 'budi@mail.com')
-    await userEvent.type(document.getElementById('register-password'), '123456')
-    await userEvent.click(document.getElementById('register-submit'))
-
-    await waitFor(() => expect(onAuthSuccess).toHaveBeenCalled())
-    expect(register).toHaveBeenCalledWith({ username: 'budi', email: 'budi@mail.com', password: '123456' })
+  it('menampilkan field email dan id register', () => {
+    const { container } = render(<AuthPage mode="register" onSuccess={vi.fn()} />)
+    expect(container.querySelector('#register-username')).toBeInTheDocument()
+    expect(container.querySelector('#register-email')).toBeInTheDocument()
+    expect(container.querySelector('#register-password')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Masuk di sini' })).toHaveAttribute('href', '/login')
+    expect(document.title).toBe('Daftar | Delcom Blog')
   })
 
-  it('memproses, error, dan tautan kembali ke login', async () => {
-    const d = deferred()
-    register.mockReturnValueOnce(d.promise)
-    render(<AuthPage mode="register" onAuthSuccess={vi.fn()} />)
-    await userEvent.type(document.getElementById('register-username'), 'budi')
-    await userEvent.type(document.getElementById('register-email'), 'budi@mail.com')
-    await userEvent.type(document.getElementById('register-password'), '123456')
-    await userEvent.click(document.getElementById('register-submit'))
-    expect(await screen.findByText('Memproses...')).toBeInTheDocument()
-    d.resolve({ token: 't', user: {} })
+  it('menolak bila email kosong', async () => {
+    render(<AuthPage mode="register" onSuccess={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Username'), 'budi')
+    await userEvent.type(screen.getByLabelText('Password'), 'rahasia')
+    await userEvent.click(screen.getByRole('button', { name: 'Daftar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Username, email, dan password wajib diisi')
+    expect(register).not.toHaveBeenCalled()
+  })
 
-    register.mockRejectedValueOnce(new Error('dipakai'))
-    await waitFor(() => expect(screen.getByText('Daftar sebagai Penulis')).toBeInTheDocument())
-    await userEvent.click(document.getElementById('register-submit'))
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('dipakai'))
+  it('berhasil mendaftar lalu menuju /login', async () => {
+    register.mockResolvedValueOnce({})
+    render(<AuthPage mode="register" onSuccess={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Username'), 'budi')
+    await userEvent.type(screen.getByLabelText('Email'), 'budi@mail.test')
+    await userEvent.type(screen.getByLabelText('Password'), 'rahasia')
+    await userEvent.click(screen.getByRole('button', { name: 'Daftar' }))
+    expect(register).toHaveBeenCalledWith({ username: 'budi', email: 'budi@mail.test', password: 'rahasia' })
+    await waitFor(() => expect(window.location.pathname).toBe('/login'))
+    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'success' })))
+  })
 
-    await userEvent.click(screen.getByRole('link', { name: 'Masuk' }))
-    expect(window.location.pathname).toBe('/login')
-    expect(document.title).toMatch(/Daftar/)
+  it('menampilkan error dari server', async () => {
+    register.mockRejectedValueOnce(new Error('username atau email sudah terdaftar'))
+    render(<AuthPage mode="register" onSuccess={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Username'), 'budi')
+    await userEvent.type(screen.getByLabelText('Email'), 'budi@mail.test')
+    await userEvent.type(screen.getByLabelText('Password'), 'rahasia')
+    await userEvent.click(screen.getByRole('button', { name: 'Daftar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('sudah terdaftar')
   })
 })

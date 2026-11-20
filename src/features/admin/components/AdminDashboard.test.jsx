@@ -1,73 +1,77 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
+import { fetchAllPosts, fetchUserPosts, fetchUsers } from '../api/adminApi'
 import AdminDashboard from './AdminDashboard'
-import { getAllPosts, getUserPosts, getUsers } from '../api/adminApi'
-import { showError } from '../../../helpers/toolsHelper'
 
-vi.mock('../api/adminApi', () => ({ getUsers: vi.fn(), getAllPosts: vi.fn(), getUserPosts: vi.fn() }))
-vi.mock('../../../helpers/toolsHelper', () => ({ formatDate: () => '1 Januari 2026', showError: vi.fn() }))
+vi.mock('../api/adminApi', () => ({ fetchUsers: vi.fn(), fetchAllPosts: vi.fn(), fetchUserPosts: vi.fn() }))
 
 const users = [
-  { id: 1, username: 'admin', email: 'a@x.id', role: 'admin', total_articles: 0, total_published: 0 },
-  { id: 2, username: 'member', email: 'm@x.id', role: 'member', total_articles: 3, total_published: 2 },
+  { id: 1, username: 'admin', email: 'admin@mail.test', role: 'admin', total_articles: 0, total_published: 0 },
+  { id: 2, username: 'andi', email: 'andi@mail.test', role: 'member', total_articles: 2, total_published: 1 },
 ]
 const allPosts = [
-  { id: 1, title: 'Artikel A', author: { username: 'member' }, category: 'Umum', is_published: true, created_at: 'x' },
-  { id: 2, title: 'Artikel B', author: { username: 'member' }, category: 'Bisnis', is_published: false, created_at: 'x' },
+  { id: 10, title: 'Artikel Satu', author_name: 'andi', category: 'Umum', is_published: true, created_at: '2026-11-01T12:00:00Z' },
+  { id: 11, title: 'Artikel Dua', author_name: 'andi', category: 'Bisnis', is_published: false, created_at: '2026-11-02T12:00:00Z' },
 ]
 
 beforeEach(() => {
-  getUsers.mockResolvedValue(users)
-  getAllPosts.mockResolvedValue(allPosts)
+  fetchUsers.mockResolvedValue(users)
+  fetchAllPosts.mockResolvedValue(allPosts)
+  fetchUserPosts.mockResolvedValue([allPosts[0]])
 })
 
 describe('AdminDashboard', () => {
-  it('menampilkan ringkasan, direktori pengguna, dan seluruh artikel', async () => {
-    render(<AdminDashboard />)
-    expect(await screen.findByText('Artikel A')).toBeInTheDocument()
+  it('menampilkan ringkasan, pengguna, dan arsip artikel', async () => {
+    render(<AdminDashboard onSessionExpired={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Memuat data')
+    expect(await screen.findByText('andi@mail.test')).toBeInTheDocument()
     expect(screen.getByText('Total Pengguna').nextSibling).toHaveTextContent('2')
-    expect(screen.getByText('Total Artikel').nextSibling).toHaveTextContent('3')
-    expect(screen.getByText('Total Terbit').nextSibling).toHaveTextContent('2')
-    expect(screen.getByText('Seluruh Artikel')).toBeInTheDocument()
-    expect(screen.getByText('Terbit', { selector: 'span' })).toBeInTheDocument()
-    expect(screen.getByText('Draf')).toBeInTheDocument()
+    expect(screen.getByText('Artikel Ditampilkan').nextSibling).toHaveTextContent('2')
+    expect(screen.getByText('Artikel Terbit').nextSibling).toHaveTextContent('1')
+    expect(screen.getByRole('heading', { level: 2, name: 'Seluruh Artikel' })).toBeInTheDocument()
+    expect(screen.getByText('Artikel Satu')).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Draf' })).toBeInTheDocument()
+    expect(document.title).toBe('Admin Panel | Delcom Blog')
   })
 
-  it('melihat artikel pengguna tertentu lalu kembali ke semua', async () => {
-    getUserPosts.mockResolvedValue([allPosts[0]])
-    render(<AdminDashboard />)
-    await screen.findByText('Artikel A')
-
-    await userEvent.click(screen.getAllByRole('button', { name: 'Lihat Artikel' })[1])
-    expect(await screen.findByText('Artikel milik member')).toBeInTheDocument()
-    expect(getUserPosts).toHaveBeenCalledWith(2)
-    expect(screen.queryByText('Artikel B')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Tampilkan Semua' }))
-    expect(await screen.findByText('Artikel B')).toBeInTheDocument()
-    expect(screen.getByText('Seluruh Artikel')).toBeInTheDocument()
+  it('memfilter artikel per pengguna lalu menampilkan semua lagi', async () => {
+    render(<AdminDashboard onSessionExpired={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Lihat artikel andi' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Artikel dari andi' })).toBeInTheDocument()
+    expect(fetchUserPosts).toHaveBeenCalledWith(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Tampilkan semua' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Seluruh Artikel' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tampilkan semua' })).not.toBeInTheDocument()
   })
 
-  it('menampilkan kondisi kosong', async () => {
-    getUsers.mockResolvedValue([])
-    getAllPosts.mockResolvedValue([])
-    render(<AdminDashboard />)
-    expect(await screen.findByText('Tidak ada artikel.')).toBeInTheDocument()
+  it('menampilkan pesan bila belum ada artikel', async () => {
+    fetchAllPosts.mockResolvedValue([])
+    render(<AdminDashboard onSessionExpired={vi.fn()} />)
+    expect(await screen.findByText('Belum ada artikel.')).toBeInTheDocument()
   })
 
-  it('menampilkan error saat memuat & saat membuka artikel pengguna', async () => {
-    getUsers.mockRejectedValueOnce(new Error('muat gagal'))
-    render(<AdminDashboard />)
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('muat gagal'))
+  it('menampilkan error', async () => {
+    fetchUsers.mockRejectedValue(Object.assign(new Error('Server error'), { status: 500 }))
+    const onSessionExpired = vi.fn()
+    render(<AdminDashboard onSessionExpired={onSessionExpired} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server error')
+    expect(onSessionExpired).not.toHaveBeenCalled()
   })
 
-  it('error saat memuat artikel pengguna', async () => {
-    getUserPosts.mockRejectedValueOnce(new Error('user gagal'))
-    render(<AdminDashboard />)
-    await screen.findByText('Artikel A')
-    await userEvent.click(screen.getAllByRole('button', { name: 'Lihat Artikel' })[0])
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('user gagal'))
-    expect(screen.getByText('Seluruh Artikel')).toBeInTheDocument()
+  it('mengakhiri sesi saat 401', async () => {
+    fetchUsers.mockRejectedValue(Object.assign(new Error('expired'), { status: 401 }))
+    const onSessionExpired = vi.fn()
+    render(<AdminDashboard onSessionExpired={onSessionExpired} />)
+    await waitFor(() => expect(onSessionExpired).toHaveBeenCalled())
+  })
+
+  it('mengabaikan hasil setelah unmount', async () => {
+    let resolve
+    fetchUsers.mockReturnValueOnce(new Promise((r) => (resolve = r)))
+    const { unmount } = render(<AdminDashboard onSessionExpired={vi.fn()} />)
+    unmount()
+    await act(async () => resolve(users))
+    expect(fetchUsers).toHaveBeenCalledTimes(1)
   })
 })

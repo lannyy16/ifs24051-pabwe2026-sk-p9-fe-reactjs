@@ -32,21 +32,23 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'esnext',
-    sourcemap: true,
     chunkSizeWarningLimit: 900,
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
-    css: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{js,jsx}'],
       exclude: ['src/main.jsx', 'src/setupTests.js', 'src/**/*.test.{js,jsx}'],
-      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
+      thresholds: {
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+      },
     },
   },
 })

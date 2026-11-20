@@ -1,5 +1,7 @@
-import { apiRequest } from '../../../helpers/apiHelper'
+import { apiList } from '../../../helpers/apiHelper'
 
-export const getUsers = async () => (await apiRequest('/admin/users')).data
-export const getAllPosts = async () => (await apiRequest('/admin/posts')).data
-export const getUserPosts = async (id) => (await apiRequest(`/admin/users/${id}/posts`)).data
+export const fetchUsers = () => apiList('/api/admin/users', { auth: true })
+
+export const fetchAllPosts = () => apiList('/api/admin/posts', { auth: true })
+
+export const fetchUserPosts = (id) => apiList(`/api/admin/users/${id}/posts`, { auth: true })

@@ -1,33 +1,57 @@
-import { describe, expect, it, vi } from 'vitest'
-import { apiRequest } from '../../../helpers/apiHelper'
-import * as api from './blogApi'
+import { vi } from 'vitest'
+import { apiData, apiList } from '../../../helpers/apiHelper'
+import {
+  createPost,
+  deletePost,
+  fetchMyPosts,
+  fetchPublicPost,
+  fetchPublicPosts,
+  fetchStats,
+  generateDraft,
+  togglePublish,
+  updatePost,
+} from './blogApi'
 
-vi.mock('../../../helpers/apiHelper', () => ({ apiRequest: vi.fn(async () => ({ data: 'D' })) }))
+vi.mock('../../../helpers/apiHelper', () => ({ apiData: vi.fn(), apiList: vi.fn() }))
 
 describe('blogApi', () => {
-  it('endpoint publik', async () => {
-    await api.getPublicPosts()
-    expect(apiRequest).toHaveBeenLastCalledWith('/public/posts', { auth: false })
-    await api.getPublicPosts({ q: 'go lang', category: 'Bisnis' })
-    expect(apiRequest).toHaveBeenLastCalledWith('/public/posts?q=go+lang&category=Bisnis', { auth: false })
-    await api.getPublicPosts({ q: 'x' })
-    expect(apiRequest).toHaveBeenLastCalledWith('/public/posts?q=x', { auth: false })
-    await api.getPublicPost('a b')
-    expect(apiRequest).toHaveBeenLastCalledWith('/public/posts/a%20b', { auth: false })
+  it('fetchPublicPosts membangun query string', () => {
+    fetchPublicPosts()
+    expect(apiList).toHaveBeenLastCalledWith('/api/public/posts')
+    fetchPublicPosts({ q: 'go', category: 'Teknologi' })
+    expect(apiList).toHaveBeenLastCalledWith('/api/public/posts?q=go&category=Teknologi')
+    fetchPublicPosts({ category: 'Bisnis' })
+    expect(apiList).toHaveBeenLastCalledWith('/api/public/posts?category=Bisnis')
+    fetchPublicPosts({ q: 'x y' })
+    expect(apiList).toHaveBeenLastCalledWith('/api/public/posts?q=x+y')
   })
 
-  it('endpoint penulis', async () => {
-    expect(await api.getMyPosts()).toBe('D')
-    expect(await api.getStats()).toBe('D')
-    expect(await api.createPost({ t: 1 })).toBe('D')
-    expect(apiRequest).toHaveBeenLastCalledWith('/posts', { method: 'POST', body: { t: 1 } })
-    expect(await api.updatePost(3, { t: 2 })).toBe('D')
-    expect(apiRequest).toHaveBeenLastCalledWith('/posts/3', { method: 'PUT', body: { t: 2 } })
-    expect(await api.togglePublish(3)).toBe('D')
-    expect(apiRequest).toHaveBeenLastCalledWith('/posts/3/toggle-publish', { method: 'PATCH' })
-    await api.deletePost(3)
-    expect(apiRequest).toHaveBeenLastCalledWith('/posts/3', { method: 'DELETE' })
-    expect(await api.aiGenerate({ topic: 'x' })).toBe('D')
-    expect(apiRequest).toHaveBeenLastCalledWith('/posts/ai-generate', { method: 'POST', body: { topic: 'x' } })
+  it('fetchPublicPost meng-encode slug', () => {
+    fetchPublicPost('a b')
+    expect(apiData).toHaveBeenCalledWith('/api/public/posts/a%20b')
+  })
+
+  it('endpoint penulis', () => {
+    fetchMyPosts()
+    expect(apiList).toHaveBeenLastCalledWith('/api/posts', { auth: true })
+    fetchStats()
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts/stats', { auth: true })
+    createPost({ title: 't' })
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts', { method: 'POST', body: { title: 't' }, auth: true })
+    updatePost(3, { title: 'u' })
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts/3', { method: 'PUT', body: { title: 'u' }, auth: true })
+    togglePublish(3)
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts/3/toggle-publish', { method: 'PATCH', auth: true })
+    deletePost(3)
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts/3', { method: 'DELETE', auth: true })
+  })
+
+  it('generateDraft', () => {
+    generateDraft({ topic: 'AI' })
+    expect(apiData).toHaveBeenLastCalledWith('/api/posts/ai-generate', {
+      method: 'POST',
+      body: { topic: 'AI' },
+      auth: true,
+    })
   })
 })

@@ -1,188 +1,188 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
 import App from './App'
 import { logout } from './features/auth/api/authApi'
+import { saveSession } from './helpers/sessionHelper'
 
 vi.mock('./features/auth/api/authApi', () => ({ logout: vi.fn() }))
-vi.mock('./features/blog/components/PublicArticleList', () => ({ default: () => <div>VIEW-LIST</div> }))
-vi.mock('./features/blog/components/PublicArticleDetail', () => ({ default: ({ slug }) => <div>VIEW-DETAIL:{slug}</div> }))
-vi.mock('./features/blog/components/AuthorDashboard', () => ({
-  default: ({ startCreate }) => <div>VIEW-AUTHOR{startCreate ? ':create' : ''}</div>,
-}))
-vi.mock('./features/admin/components/AdminDashboard', () => ({ default: () => <div>VIEW-ADMIN</div> }))
-vi.mock('./features/auth/components/AuthPage', () => ({
-  default: ({ mode, onAuthSuccess }) => (
-    <div>
-      VIEW-{mode.toUpperCase()}
-      <button onClick={() => onAuthSuccess({ token: 't1', user: { id: 1, role: 'member' } })}>auth-member</button>
-      <button onClick={() => onAuthSuccess({ token: 't2', user: { id: 2, role: 'admin' } })}>auth-admin</button>
-    </div>
-  ),
-}))
-vi.mock('./features/auth/modals/AuthModal', () => ({
-  default: ({ open, onClose, onAuthSuccess }) =>
-    open ? (
-      <div>
-        MODAL-LOGIN
-        <button onClick={() => onAuthSuccess({ token: 't', user: { id: 1, role: 'member' } })}>modal-auth</button>
-        <button onClick={onClose}>modal-close</button>
-      </div>
-    ) : null,
-}))
-vi.mock('./features/blog/components/StickyNavbar', () => ({
-  default: ({ user, onLogout, onOpenLogin, onToggleTheme, onAccent }) => (
-    <nav>
-      <span>user:{user ? user.role : 'guest'}</span>
-      <button onClick={onOpenLogin}>open-login</button>
-      <button onClick={onLogout}>logout</button>
-      <button onClick={onToggleTheme}>theme</button>
-      <button onClick={() => onAccent('rose')}>accent</button>
-    </nav>
-  ),
-}))
-
-const member = { id: 1, role: 'member', username: 'm' }
-const admin = { id: 2, role: 'admin', username: 'a' }
-const session = (user) => {
-  localStorage.setItem('token', 'tok')
-  localStorage.setItem('user', JSON.stringify(user))
-}
-const go = (path) =>
-  act(() => {
-    window.history.pushState({}, '', path)
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  })
-
-beforeEach(() => {
-  logout.mockResolvedValue({})
+vi.mock('./features/blog/components/PublicArticleList', async () => {
+  const { createElement: h } = await import('react')
+  return { default: () => h('div', null, 'HALAMAN-LIST') }
+})
+vi.mock('./features/blog/components/PublicArticleDetail', async () => {
+  const { createElement: h } = await import('react')
+  return { default: ({ slug }) => h('div', null, `HALAMAN-DETAIL:${slug}`) }
+})
+vi.mock('./features/auth/components/AuthPage', async () => {
+  const { createElement: h } = await import('react')
+  return {
+    default: ({ mode, onSuccess }) =>
+      h(
+        'div',
+        null,
+        h('span', null, `HALAMAN-AUTH:${mode}`),
+        h('button', { onClick: () => onSuccess({ token: 'tok', user: { id: 1, role: 'member' } }) }, 'login-sukses'),
+        h('button', { onClick: () => onSuccess({ token: 'tok', user: { id: 2, role: 'admin' } }) }, 'login-admin'),
+      ),
+  }
+})
+vi.mock('./features/blog/components/AuthorDashboard', async () => {
+  const { createElement: h } = await import('react')
+  return {
+    default: ({ onSessionExpired }) =>
+      h('div', null, h('span', null, 'HALAMAN-AUTHOR'), h('button', { onClick: onSessionExpired }, 'sesi-habis')),
+  }
+})
+vi.mock('./features/admin/components/AdminDashboard', async () => {
+  const { createElement: h } = await import('react')
+  return { default: () => h('div', null, 'HALAMAN-ADMIN') }
 })
 
-describe('App', () => {
-  it('menampilkan fallback saat memuat halaman lazy (pemuatan pertama)', async () => {
-    session(member)
-    window.history.pushState({}, '', '/dashboard')
+const member = { id: 1, username: 'andi', role: 'member' }
+const admin = { id: 2, username: 'admin', role: 'admin' }
+const visit = (path) => window.history.pushState({}, '', path)
+
+describe('App routing', () => {
+  it('menampilkan beranda, skip link, dan footer', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Memuat halaman...' })).toBeInTheDocument()
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
+    expect(screen.getByText('HALAMAN-LIST')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Lewati ke konten utama' })).toHaveAttribute('href', '#main-content')
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
+    expect(screen.getByText(/© 2026 Delcom Blog/)).toBeInTheDocument()
   })
 
-  it('menampilkan beranda, footer, dan mengikuti popstate (detail, 404)', async () => {
+  it('/public dan /posts/:slug', () => {
+    visit('/public')
+    const { unmount } = render(<App />)
+    expect(screen.getByText('HALAMAN-LIST')).toBeInTheDocument()
+    unmount()
+    visit('/posts/halo')
     render(<App />)
-    expect(screen.getByText('VIEW-LIST')).toBeInTheDocument()
-    expect(screen.getByText('user:guest')).toBeInTheDocument()
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(screen.getByText('HALAMAN-DETAIL:halo')).toBeInTheDocument()
+  })
 
-    go('/posts/abc%20d')
-    expect(screen.getByText('VIEW-DETAIL:abc d')).toBeInTheDocument()
-
-    go('/tidak-ada')
+  it('halaman tidak ditemukan dengan tautan kembali', async () => {
+    visit('/tidak-ada')
+    render(<App />)
     expect(screen.getByRole('heading', { level: 1, name: 'Halaman tidak ditemukan' })).toBeInTheDocument()
-    expect(document.title).toMatch(/tidak ditemukan/)
+    expect(document.title).toBe('Halaman tidak ditemukan | Delcom Blog')
     await userEvent.click(screen.getByRole('link', { name: 'Kembali ke beranda' }))
-    expect(screen.getByText('VIEW-LIST')).toBeInTheDocument()
+    expect(await screen.findByText('HALAMAN-LIST')).toBeInTheDocument()
   })
 
-  it('merender langsung dari URL awal (refresh tetap di rute yang sama)', () => {
-    window.history.pushState({}, '', '/register')
+  it('/login dan /register untuk tamu', () => {
+    visit('/login')
+    const { unmount } = render(<App />)
+    expect(screen.getByText('HALAMAN-AUTH:login')).toBeInTheDocument()
+    unmount()
+    visit('/register')
     render(<App />)
-    expect(screen.getByText('VIEW-REGISTER')).toBeInTheDocument()
+    expect(screen.getByText('HALAMAN-AUTH:register')).toBeInTheDocument()
   })
 
-  it('mengalihkan tamu dari /dashboard dan /admin ke /login (replaceState)', async () => {
-    window.history.pushState({}, '', '/dashboard')
-    render(<App />)
-    expect(await screen.findByText('VIEW-LOGIN')).toBeInTheDocument()
+  it('tamu yang membuka /author atau /admin dialihkan ke /login', async () => {
+    visit('/author')
+    const { unmount } = render(<App />)
+    expect(await screen.findByText('HALAMAN-AUTH:login')).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
-
-    go('/admin')
+    unmount()
+    visit('/admin')
+    render(<App />)
     await waitFor(() => expect(window.location.pathname).toBe('/login'))
   })
 
-  it('member tidak boleh /admin; pengguna login dialihkan dari /login dan /register', async () => {
-    session(member)
-    window.history.pushState({}, '', '/admin')
+  it('token tanpa data user dianggap belum login', async () => {
+    localStorage.setItem('delcom_blog_token', 'tok')
+    visit('/author')
     render(<App />)
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/dashboard')
-
-    go('/register')
-    await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
+    await waitFor(() => expect(window.location.pathname).toBe('/login'))
   })
 
-  it('/author tetap berfungsi sebagai alias dan /posts/create membuka form tambah', async () => {
-    session(member)
-    window.history.pushState({}, '', '/author')
-    render(<App />)
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
-
-    go('/posts/create')
-    expect(await screen.findByText('VIEW-AUTHOR:create')).toBeInTheDocument()
-
-    go('/posts')
-    expect(screen.getByText('VIEW-LIST')).toBeInTheDocument()
-  })
-
-  it('admin dapat membuka /admin', async () => {
-    session(admin)
-    window.history.pushState({}, '', '/admin')
-    render(<App />)
-    expect(await screen.findByText('VIEW-ADMIN')).toBeInTheDocument()
-    expect(screen.getByText('user:admin')).toBeInTheDocument()
-  })
-
-  it('login berhasil: member → /dashboard, admin → /admin, tersimpan di localStorage', async () => {
-    window.history.pushState({}, '', '/login')
+  it('member membuka /admin dialihkan ke /author, dan /login ke beranda role', async () => {
+    saveSession('tok', member)
+    visit('/admin')
     const { unmount } = render(<App />)
-    await userEvent.click(screen.getByText('auth-member'))
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
-    expect(localStorage.getItem('token')).toBe('t1')
-    expect(window.location.pathname).toBe('/dashboard')
+    expect(await screen.findByText('HALAMAN-AUTHOR')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/author')
     unmount()
-
-    localStorage.clear()
-    window.history.pushState({}, '', '/login')
+    visit('/login')
     render(<App />)
-    await userEvent.click(screen.getByText('auth-admin'))
-    expect(await screen.findByText('VIEW-ADMIN')).toBeInTheDocument()
+    await waitFor(() => expect(window.location.pathname).toBe('/author'))
   })
 
-  it('login lewat modal navbar: buka, tutup, lalu masuk', async () => {
+  it('admin dapat membuka /admin', () => {
+    saveSession('tok', admin)
+    visit('/admin')
     render(<App />)
-    await userEvent.click(screen.getByText('open-login'))
-    expect(screen.getByText('MODAL-LOGIN')).toBeInTheDocument()
-    await userEvent.click(screen.getByText('modal-close'))
-    expect(screen.queryByText('MODAL-LOGIN')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByText('open-login'))
-    await userEvent.click(screen.getByText('modal-auth'))
-    expect(screen.queryByText('MODAL-LOGIN')).not.toBeInTheDocument()
-    expect(await screen.findByText('VIEW-AUTHOR')).toBeInTheDocument()
+    expect(screen.getByText('HALAMAN-ADMIN')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument()
   })
 
-  it('logout membersihkan sesi, juga ketika API logout gagal', async () => {
-    session(member)
-    const first = render(<App />)
-    await userEvent.click(screen.getByText('logout'))
-    await waitFor(() => expect(screen.getByText('user:guest')).toBeInTheDocument())
-    expect(localStorage.getItem('token')).toBeNull()
-    expect(screen.getByText('VIEW-LIST')).toBeInTheDocument()
-    first.unmount()
+  it('mengikuti popstate peramban', async () => {
+    render(<App />)
+    act(() => {
+      visit('/posts/lain')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(await screen.findByText('HALAMAN-DETAIL:lain')).toBeInTheDocument()
+  })
+})
 
-    session(member)
+describe('App sesi', () => {
+  it('login member sukses menyimpan sesi dan menuju /author', async () => {
+    visit('/login')
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'login-sukses' }))
+    expect(await screen.findByText('HALAMAN-AUTHOR')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/author')
+    expect(localStorage.getItem('delcom_blog_token')).toBe('tok')
+    expect(screen.getByRole('button', { name: 'Keluar' })).toBeInTheDocument()
+  })
+
+  it('login admin menuju /admin', async () => {
+    visit('/login')
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'login-admin' }))
+    expect(await screen.findByText('HALAMAN-ADMIN')).toBeInTheDocument()
+  })
+
+  it('logout menghapus sesi dan kembali ke beranda', async () => {
+    logout.mockResolvedValueOnce({})
+    saveSession('tok', member)
+    visit('/author')
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Keluar' }))
+    expect(await screen.findByText('HALAMAN-LIST')).toBeInTheDocument()
+    expect(logout).toHaveBeenCalled()
+    expect(localStorage.getItem('delcom_blog_token')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Masuk' })).toBeInTheDocument()
+  })
+
+  it('logout tetap menghapus sesi walau server gagal', async () => {
     logout.mockRejectedValueOnce(new Error('offline'))
+    saveSession('tok', member)
+    visit('/author')
     render(<App />)
-    await userEvent.click(screen.getByText('logout'))
-    await waitFor(() => expect(localStorage.getItem('token')).toBeNull())
+    await userEvent.click(screen.getByRole('button', { name: 'Keluar' }))
+    expect(await screen.findByText('HALAMAN-LIST')).toBeInTheDocument()
+    expect(localStorage.getItem('delcom_blog_token')).toBeNull()
   })
 
-  it('tombol tema dan aksen tersambung ke useTheme', async () => {
+  it('sesi kedaluwarsa mengembalikan ke /login', async () => {
+    saveSession('tok', member)
+    visit('/author')
     render(<App />)
-    await userEvent.click(screen.getByText('theme'))
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
-    await userEvent.click(screen.getByText('accent'))
-    expect(document.documentElement.dataset.accent).toBe('rose')
-    document.documentElement.classList.remove('dark')
+    await userEvent.click(screen.getByRole('button', { name: 'sesi-habis' }))
+    expect(await screen.findByText('HALAMAN-AUTH:login')).toBeInTheDocument()
+    expect(localStorage.getItem('delcom_blog_token')).toBeNull()
   })
 
+  it('tombol tema mengubah kelas dark pada html', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Aktifkan mode gelap' }))
+    expect(document.documentElement).toHaveClass('dark')
+    await userEvent.click(screen.getByRole('button', { name: 'Aktifkan mode terang' }))
+    expect(document.documentElement).not.toHaveClass('dark')
+  })
 })

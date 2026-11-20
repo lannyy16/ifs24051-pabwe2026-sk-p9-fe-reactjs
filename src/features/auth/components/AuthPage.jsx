@@ -1,107 +1,122 @@
 import { useState } from 'react'
-import { IconBrain, IconEdit, IconFeather, IconMail, IconSearch, IconLock, IconUser } from '@tabler/icons-react'
 import Link from '../../../components/Link'
-import usePageMeta from '../../../hooks/usePageMeta'
 import useInput from '../../../hooks/useInput'
-import { register } from '../api/authApi'
-import { showError } from '../../../helpers/toolsHelper'
-import LoginForm from './LoginForm'
+import usePageMeta from '../../../hooks/usePageMeta'
+import { navigate } from '../../../helpers/router'
+import { showSuccess } from '../../../helpers/toolsHelper'
+import { login, register } from '../api/authApi'
 
-const PERKS = [
-  [IconEdit, 'Editor Markdown dengan pratinjau langsung'],
-  [IconBrain, 'AI Blog Generator untuk draf artikel instan'],
-  [IconSearch, 'Sumber rujukan dari Search Engine'],
-]
+const inputClass =
+  'w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white'
+const labelClass = 'mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200'
 
-function RegisterForm({ onSuccess }) {
-  const [username, onUsername] = useInput('')
-  const [email, onEmail] = useInput('')
-  const [password, onPassword] = useInput('')
+export default function AuthPage({ mode, onSuccess }) {
+  const isLogin = mode === 'login'
+  usePageMeta(
+    isLogin ? 'Masuk | Delcom Blog' : 'Daftar | Delcom Blog',
+    isLogin ? 'Masuk ke akun Delcom Blog Anda untuk mengelola artikel.' : 'Daftar akun penulis baru di Delcom Blog.',
+  )
+  const prefix = isLogin ? 'login' : 'register'
+  const [username, onUsername] = useInput()
+  const [email, onEmail] = useInput()
+  const [password, onPassword] = useInput()
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const submit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!username.trim() || !password || (!isLogin && !email.trim())) {
+      setError(isLogin ? 'Username dan password wajib diisi' : 'Username, email, dan password wajib diisi')
+      return
+    }
+    setError('')
     setLoading(true)
     try {
-      onSuccess(await register({ username, email, password }))
+      if (isLogin) {
+        onSuccess(await login({ username: username.trim(), password }))
+      } else {
+        await register({ username: username.trim(), email: email.trim(), password })
+        showSuccess('Registrasi berhasil, silakan masuk')
+        navigate('/login')
+      }
     } catch (err) {
-      showError(err.message)
-    } finally {
+      setError(err.message)
       setLoading(false)
     }
   }
 
-  const icon = 'pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-300'
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div>
-        <label htmlFor="register-username" className="mb-1.5 block text-sm font-semibold">Username</label>
-        <div className="relative">
-          <IconUser size={18} className={icon} aria-hidden="true" />
-          <input id="register-username" autoComplete="username" className="input !pl-10" value={username} onChange={onUsername} minLength={3} required />
-        </div>
-      </div>
-      <div>
-        <label htmlFor="register-email" className="mb-1.5 block text-sm font-semibold">Email</label>
-        <div className="relative">
-          <IconMail size={18} className={icon} aria-hidden="true" />
-          <input id="register-email" type="email" autoComplete="email" className="input !pl-10" value={email} onChange={onEmail} required />
-        </div>
-      </div>
-      <div>
-        <label htmlFor="register-password" className="mb-1.5 block text-sm font-semibold">Password</label>
-        <div className="relative">
-          <IconLock size={18} className={icon} aria-hidden="true" />
-          <input id="register-password" type="password" autoComplete="new-password" className="input !pl-10" value={password} onChange={onPassword} minLength={6} required />
-        </div>
-      </div>
-      <button id="register-submit" type="submit" className="btn-primary w-full" disabled={loading}>
-        {loading ? 'Memproses...' : 'Daftar sebagai Penulis'}
-      </button>
-    </form>
-  )
-}
-
-/** Halaman mandiri /login dan /register. */
-export default function AuthPage({ mode = 'login', onAuthSuccess }) {
-  const isLogin = mode === 'login'
-  usePageMeta(
-    isLogin ? 'Masuk - Delcom Blog' : 'Daftar - Delcom Blog',
-    isLogin ? 'Masuk ke Delcom Blog untuk mengelola artikel Anda.' : 'Buat akun penulis Delcom Blog dan mulai menerbitkan artikel.',
-  )
-  return (
-    <main className="mx-auto grid min-h-[calc(100vh-14rem)] w-full max-w-5xl items-stretch px-4 py-10 lg:grid-cols-2">
-      <section aria-label="Tentang Delcom Blog" className="hero-bg hidden flex-col justify-between rounded-l-3xl p-10 text-white lg:flex">
-        <p className="m-0 flex items-center gap-2 text-xl font-bold">
-          <IconFeather size={26} aria-hidden="true" /> Delcom Blog
-        </p>
-        <div>
-          <p className="m-0 text-3xl font-extrabold leading-tight">Tulis lebih cepat, terbit lebih percaya diri.</p>
-          <ul className="m-0 mt-6 list-none space-y-3 p-0">
-            {PERKS.map(([Icon, text]) => (
-              <li key={text} className="flex items-center gap-3 font-medium">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/20" aria-hidden="true"><Icon size={20} /></span>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="m-0 text-sm text-white">Platform publikasi artikel multi-tier.</p>
-      </section>
-
-      <section className="card flex flex-col justify-center rounded-3xl p-8 shadow-xl sm:p-10 lg:rounded-l-none">
-        <h1 className="m-0 text-3xl font-extrabold tracking-tight">{isLogin ? 'Masuk ke Delcom Blog' : 'Daftar Akun Penulis'}</h1>
-        <p className="mb-6 mt-2 muted">
-          {isLogin ? 'Kelola artikel dan gunakan AI Generator.' : 'Mulai menulis dan bagikan gagasan Anda.'}
-        </p>
-        {isLogin ? <LoginForm onSuccess={onAuthSuccess} /> : <RegisterForm onSuccess={onAuthSuccess} />}
-        <p className="m-0 mt-6 text-center text-sm">
+    <div className="mx-auto w-full max-w-md px-4 py-12">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h1 className="m-0 text-2xl font-bold text-slate-900 dark:text-white">
+          {isLogin ? 'Masuk ke Delcom Blog' : 'Daftar Akun Penulis'}
+        </h1>
+        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+          <div>
+            <label htmlFor={`${prefix}-username`} className={labelClass}>
+              Username
+            </label>
+            <input
+              id={`${prefix}-username`}
+              name="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={onUsername}
+              className={inputClass}
+            />
+          </div>
+          {!isLogin && (
+            <div>
+              <label htmlFor="register-email" className={labelClass}>
+                Email
+              </label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={onEmail}
+                className={inputClass}
+              />
+            </div>
+          )}
+          <div>
+            <label htmlFor={`${prefix}-password`} className={labelClass}>
+              Password
+            </label>
+            <input
+              id={`${prefix}-password`}
+              name="password"
+              type="password"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={onPassword}
+              className={inputClass}
+            />
+          </div>
+          {error && (
+            <p role="alert" className="m-0 rounded-lg bg-red-100 p-3 text-sm text-red-900">
+              {error}
+            </p>
+          )}
+          <button
+            id={`${prefix}-submit`}
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-indigo-700 px-4 py-2 font-semibold text-white hover:bg-indigo-800 disabled:opacity-60"
+          >
+            {isLogin ? 'Masuk' : 'Daftar'}
+          </button>
+        </form>
+        <p className="mb-0 mt-6 text-sm text-slate-700 dark:text-slate-300">
           {isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
-          <Link to={isLogin ? '/register' : '/login'} className="font-semibold text-accent-ink underline">
-            {isLogin ? 'Daftar' : 'Masuk'}
+          <Link to={isLogin ? '/register' : '/login'} className="font-medium text-indigo-700 underline dark:text-indigo-300">
+            {isLogin ? 'Daftar sekarang' : 'Masuk di sini'}
           </Link>
         </p>
-      </section>
-    </main>
+      </div>
+    </div>
   )
 }

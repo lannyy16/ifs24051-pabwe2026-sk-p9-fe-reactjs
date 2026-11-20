@@ -1,76 +1,72 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
+import { fetchPublicPosts } from '../api/blogApi'
 import PublicArticleList from './PublicArticleList'
-import { getPublicPosts } from '../api/blogApi'
 
-vi.mock('../api/blogApi', () => ({ getPublicPosts: vi.fn() }))
+vi.mock('../api/blogApi', () => ({ fetchPublicPosts: vi.fn() }))
 
-const post = (over = {}) => ({
-  id: 1, slug: 'halo', title: 'Halo Dunia', excerpt: 'ringkas', category: 'Teknologi',
-  cover_image_path: '', reading_time: 3, published_at: '2026-01-02T00:00:00Z', author: { username: 'budi' }, ...over,
-})
-
-const deferred = () => {
-  let resolve, reject
-  const promise = new Promise((res, rej) => { resolve = res; reject = rej })
-  return { promise, resolve, reject }
-}
+const posts = [
+  {
+    id: 1,
+    slug: 'belajar-go',
+    title: 'Belajar Go',
+    category: 'Teknologi',
+    excerpt: 'Ringkasan Go',
+    author_name: 'andi',
+    published_at: '2026-11-10T12:00:00Z',
+    reading_time: 3,
+  },
+]
 
 describe('PublicArticleList', () => {
-  it('memuat kategori & artikel, filter pill, pencarian, dan navigasi', async () => {
-    getPublicPosts.mockResolvedValue([post(), post({ id: 2, slug: 'b', title: 'Berseni', cover_image_path: 'http://img/x.png' })])
+  it('menampilkan status memuat lalu daftar artikel', async () => {
+    let resolve
+    fetchPublicPosts.mockReturnValueOnce(new Promise((r) => (resolve = r)))
     render(<PublicArticleList />)
-
-    expect(screen.getByRole('status')).toHaveTextContent('Memuat artikel...')
-    expect(await screen.findByText('Halo Dunia')).toBeInTheDocument()
-    expect(document.querySelector('img')).toHaveAttribute('src', 'http://img/x.png')
-    expect(screen.getByText('H', { selector: 'div' })).toBeInTheDocument()
-    expect(getPublicPosts).toHaveBeenLastCalledWith({ q: '', category: '' })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Bisnis' }))
-    await waitFor(() => expect(getPublicPosts).toHaveBeenLastCalledWith({ q: '', category: 'Bisnis' }))
-    await userEvent.type(screen.getByLabelText('Cari artikel'), 'g')
-    await waitFor(() => expect(getPublicPosts).toHaveBeenLastCalledWith({ q: 'g', category: 'Bisnis' }))
-
-    await userEvent.click(screen.getByRole('button', { name: 'Semua' }))
-    await userEvent.click(await screen.findByRole('link', { name: 'Halo Dunia' }))
-    expect(window.location.pathname).toBe('/posts/halo')
-    expect(document.title).toMatch(/Delcom Blog/)
+    expect(screen.getByRole('status')).toHaveTextContent('Memuat artikel')
+    await act(async () => resolve(posts))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Belajar Go' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Belajar Go' })).toHaveAttribute('href', '/posts/belajar-go')
+    expect(screen.getByText(/3 menit baca/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Delcom Blog' })).toBeInTheDocument()
+    expect(document.title).toContain('Delcom Blog')
   })
 
-  it('menampilkan kondisi kosong', async () => {
-    getPublicPosts.mockResolvedValue([])
+  it('menampilkan pesan kosong', async () => {
+    fetchPublicPosts.mockResolvedValueOnce([])
     render(<PublicArticleList />)
     expect(await screen.findByText('Belum ada artikel yang cocok.')).toBeInTheDocument()
   })
 
   it('menampilkan pesan error', async () => {
-    getPublicPosts.mockRejectedValue(new Error('Server mati'))
+    fetchPublicPosts.mockRejectedValueOnce(new Error('Server mati'))
     render(<PublicArticleList />)
-    expect(await screen.findByText('Server mati')).toBeInTheDocument()
-    expect(screen.queryByText('Belum ada artikel yang cocok.')).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server mati')
   })
 
-  it('mengabaikan hasil permintaan lama (sukses) yang selesai terlambat', async () => {
-    const first = deferred()
-    getPublicPosts.mockReturnValueOnce(first.promise).mockResolvedValue([post({ title: 'Terbaru' })])
+  it('mencari dengan kata kunci dan memfilter kategori', async () => {
+    fetchPublicPosts.mockResolvedValue(posts)
     render(<PublicArticleList />)
+    await screen.findByText('Belajar Go')
 
-    await userEvent.type(screen.getByLabelText('Cari artikel'), 'x')
-    expect(await screen.findByText('Terbaru')).toBeInTheDocument()
-    await act(async () => first.resolve([post({ title: 'Usang' })]))
-    expect(screen.queryByText('Usang')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Cari artikel'), 'go')
+    expect(fetchPublicPosts).toHaveBeenLastCalledWith({ q: 'go', category: '' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Teknologi' }))
+    expect(screen.getByRole('button', { name: 'Teknologi' })).toHaveAttribute('aria-pressed', 'true')
+    expect(fetchPublicPosts).toHaveBeenLastCalledWith({ q: 'go', category: 'Teknologi' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Semua' }))
+    expect(fetchPublicPosts).toHaveBeenLastCalledWith({ q: 'go', category: '' })
   })
 
-  it('mengabaikan error permintaan lama yang selesai terlambat', async () => {
-    const first = deferred()
-    getPublicPosts.mockReturnValueOnce(first.promise).mockResolvedValue([post({ title: 'Terbaru' })])
-    render(<PublicArticleList />)
-
-    await userEvent.type(screen.getByLabelText('Cari artikel'), 'x')
-    expect(await screen.findByText('Terbaru')).toBeInTheDocument()
-    await act(async () => first.reject(new Error('Usang')))
-    expect(screen.queryByText('Usang')).not.toBeInTheDocument()
+  it('mengabaikan hasil yang datang setelah unmount', async () => {
+    let resolve
+    fetchPublicPosts.mockReturnValueOnce(new Promise((r) => (resolve = r)))
+    const { unmount } = render(<PublicArticleList />)
+    unmount()
+    await act(async () => resolve(posts))
+    expect(fetchPublicPosts).toHaveBeenCalledTimes(1)
   })
 })

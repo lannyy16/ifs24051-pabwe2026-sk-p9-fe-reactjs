@@ -1,14 +1,9 @@
-import { apiRequest } from '../../../helpers/apiHelper'
+import { apiData, apiRequest } from '../../../helpers/apiHelper'
 
-export const login = async (username, password) =>
-  (await apiRequest('/auth/login', { method: 'POST', body: { username, password }, auth: false })).data
+export const login = (payload) => apiData('/api/auth/login', { method: 'POST', body: payload })
 
-export const register = async (payload) =>
-  (await apiRequest('/auth/register', { method: 'POST', body: payload, auth: false })).data
+export const register = (payload) => apiData('/api/auth/register', { method: 'POST', body: payload })
 
-export const logout = async () => apiRequest('/auth/logout', { method: 'POST' })
+export const logout = () => apiRequest('/api/auth/logout', { method: 'POST', auth: true })
 
-export const getProfile = async () => (await apiRequest('/auth/profile')).data
-
-export const updateProfile = async (payload) =>
-  (await apiRequest('/auth/profile', { method: 'PUT', body: payload })).data
+export const getProfile = () => apiData('/api/auth/profile', { auth: true })

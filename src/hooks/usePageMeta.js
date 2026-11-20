@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 
-/** Mengatur <title> dan meta description untuk halaman aktif (SPA). */
 export default function usePageMeta(title, description) {
   useEffect(() => {
     document.title = title
