@@ -4,7 +4,7 @@ import PostStats from './PostStats'
 
 describe('PostStats', () => {
   it('menampilkan 3 kartu statistik', () => {
-    render(<PostStats stats={{ total: 5, published: 3, draft: 2 }} />)
+    render(<PostStats stats={{ total_articles: 5, total_selesai: 3, belum_selesai: 2 }} />)
     expect(screen.getByText('Total Artikel').nextSibling).toHaveTextContent('5')
     expect(screen.getByText('Total Terbit').nextSibling).toHaveTextContent('3')
     expect(screen.getByText('Belum Selesai (Draf)').nextSibling).toHaveTextContent('2')

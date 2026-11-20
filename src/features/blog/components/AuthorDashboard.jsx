@@ -14,7 +14,7 @@ const menuItem = 'block w-full px-4 py-2.5 text-left text-sm font-medium hover:b
 export default function AuthorDashboard({ startCreate = false }) {
   usePageMeta('Workspace Penulis - Delcom Blog', 'Kelola artikel, status terbit, dan gunakan AI Generator di workspace penulis Delcom Blog.')
   const [posts, setPosts] = useState([])
-  const [stats, setStats] = useState({ total: 0, published: 0, draft: 0 })
+  const [stats, setStats] = useState({ total_articles: 0, total_selesai: 0, belum_selesai: 0 })
   const [loading, setLoading] = useState(true)
   const [menuId, setMenuId] = useState(null)
   const [modal, setModal] = useState({ type: startCreate ? 'post' : null, post: null, initial: null })

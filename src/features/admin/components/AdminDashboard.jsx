@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const totalPosts = users.reduce((n, u) => n + u.total_posts, 0)
+  const totalPosts = users.reduce((n, u) => n + u.total_articles, 0)
   const totalPublished = users.reduce((n, u) => n + u.total_published, 0)
 
   return (
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
               <tr key={u.id} className="border-t border-slate-200 dark:border-slate-700">
                 <td className={td}>{u.id}</td><td className={`${td} font-semibold`}>{u.username}</td>
                 <td className={td}>{u.email}</td><td className={td}><span className="badge">{u.role}</span></td>
-                <td className={td}>{u.total_posts}</td><td className={td}>{u.total_published}</td>
+                <td className={td}>{u.total_articles}</td><td className={td}>{u.total_published}</td>
                 <td className={`${td} text-right`}>
                   <button type="button" className="btn-ghost !min-h-9" onClick={() => showUserPosts(u)}>Lihat Artikel</button>
                 </td>

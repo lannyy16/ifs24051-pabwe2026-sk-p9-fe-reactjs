@@ -15,9 +15,9 @@ Akun bawaan backend: `admin / admin` dan `member / member`.
 
 ## Menghubungkan ke backend
 
-`.env.production` berisi `VITE_API_BASE_URL` (URL backend di Vercel, tanpa slash di akhir).
-**Ganti** bila nama project Vercel backend Anda berbeda, lalu commit dan deploy ulang
-(variabel dibaca saat `npm run build`).
+`.env.production` berisi `VITE_API_BASE_URL` (URL backend, tanpa slash di akhir; default
+`https://ifs24051-pabwe2026-sk-p9-be-golang-gin.s1if.cloud`). **Ganti** bila URL backend Anda berbeda,
+lalu commit dan deploy ulang (variabel dibaca saat `npm run build`). Backend harus sudah hidup lebih dulu.
 
 ## Pengujian (100% Statements / Branches / Functions / Lines)
 

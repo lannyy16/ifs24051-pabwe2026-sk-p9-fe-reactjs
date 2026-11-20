@@ -9,8 +9,8 @@ vi.mock('../api/adminApi', () => ({ getUsers: vi.fn(), getAllPosts: vi.fn(), get
 vi.mock('../../../helpers/toolsHelper', () => ({ formatDate: () => '1 Januari 2026', showError: vi.fn() }))
 
 const users = [
-  { id: 1, username: 'admin', email: 'a@x.id', role: 'admin', total_posts: 0, total_published: 0 },
-  { id: 2, username: 'member', email: 'm@x.id', role: 'member', total_posts: 3, total_published: 2 },
+  { id: 1, username: 'admin', email: 'a@x.id', role: 'admin', total_articles: 0, total_published: 0 },
+  { id: 2, username: 'member', email: 'm@x.id', role: 'member', total_articles: 3, total_published: 2 },
 ]
 const allPosts = [
   { id: 1, title: 'Artikel A', author: { username: 'member' }, category: 'Umum', is_published: true, created_at: 'x' },

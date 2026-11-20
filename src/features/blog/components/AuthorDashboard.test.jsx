@@ -37,7 +37,7 @@ const draft = { id: 2, slug: 'drf', title: 'Draf Dua', category: 'Bisnis', is_pu
 
 beforeEach(() => {
   getMyPosts.mockResolvedValue([published, draft])
-  getStats.mockResolvedValue({ total: 2, published: 1, draft: 1 })
+  getStats.mockResolvedValue({ total_articles: 2, total_selesai: 1, belum_selesai: 1 })
 })
 
 describe('AuthorDashboard', () => {
