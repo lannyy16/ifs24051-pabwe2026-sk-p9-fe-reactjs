@@ -71,14 +71,14 @@ describe('App routing', () => {
     expect(await screen.findByText('HALAMAN-LIST')).toBeInTheDocument()
   })
 
-  it('/login dan /register untuk tamu', () => {
+  it('/login dan /register untuk tamu', async () => {
     visit('/login')
     const { unmount } = render(<App />)
-    expect(screen.getByText('HALAMAN-AUTH:login')).toBeInTheDocument()
+    expect(await screen.findByText('HALAMAN-AUTH:login')).toBeInTheDocument()
     unmount()
     visit('/register')
     render(<App />)
-    expect(screen.getByText('HALAMAN-AUTH:register')).toBeInTheDocument()
+    expect(await screen.findByText('HALAMAN-AUTH:register')).toBeInTheDocument()
   })
 
   it('tamu yang membuka /author atau /admin dialihkan ke /login', async () => {
@@ -111,11 +111,11 @@ describe('App routing', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/author'))
   })
 
-  it('admin dapat membuka /admin', () => {
+  it('admin dapat membuka /admin', async () => {
     saveSession('tok', admin)
     visit('/admin')
     render(<App />)
-    expect(screen.getByText('HALAMAN-ADMIN')).toBeInTheDocument()
+    expect(await screen.findByText('HALAMAN-ADMIN')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument()
   })
 

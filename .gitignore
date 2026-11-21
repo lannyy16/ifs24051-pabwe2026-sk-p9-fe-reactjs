@@ -5,3 +5,10 @@ coverage
 .env.local
 .vercel
 *.log
+.trivy-cache
+trivy-results.sarif
+latest-app.zip
+.vscode
+.idea
+.DS_Store
+.vite

@@ -7,6 +7,7 @@ import { CATEGORIES } from '../constants'
 
 const ALL = 'Semua'
 const FILTERS = [ALL, ...CATEGORIES]
+const PAGE_SIZE = 9
 
 export default function PublicArticleList() {
   usePageMeta('Delcom Blog - Artikel Teknologi, Pendidikan, dan Lainnya', 'Baca artikel terbaru di Delcom Blog. Cari berdasarkan kata kunci atau filter kategori.')
@@ -15,6 +16,7 @@ export default function PublicArticleList() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [visible, setVisible] = useState(PAGE_SIZE)
 
   useEffect(() => {
     let active = true
@@ -29,6 +31,7 @@ export default function PublicArticleList() {
       }
       if (!active) return
       setPosts(result)
+      setVisible(PAGE_SIZE)
       setError(message)
       setLoading(false)
     }
@@ -85,7 +88,7 @@ export default function PublicArticleList() {
         {!loading && !error && posts.length === 0 && <p>Belum ada artikel yang cocok.</p>}
         {!loading && !error && posts.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
+            {posts.slice(0, visible).map((post) => (
               <article
                 key={post.id}
                 className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
@@ -104,6 +107,17 @@ export default function PublicArticleList() {
                 </p>
               </article>
             ))}
+          </div>
+        )}
+        {!loading && !error && posts.length > visible && (
+          <div className="mt-8 text-center">
+            <button
+              type="button"
+              onClick={() => setVisible((n) => n + PAGE_SIZE)}
+              className="rounded-lg border border-slate-500 bg-white px-5 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:bg-slate-800 dark:text-white"
+            >
+              Muat lebih banyak
+            </button>
           </div>
         )}
       </section>

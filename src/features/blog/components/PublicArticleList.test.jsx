@@ -33,6 +33,17 @@ describe('PublicArticleList', () => {
     expect(document.title).toContain('Delcom Blog')
   })
 
+  it('membatasi 9 artikel per halaman dan memuat lebih banyak', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ ...posts[0], id: i + 1, slug: `a-${i}`, title: `Artikel ${i + 1}` }))
+    fetchPublicPosts.mockResolvedValueOnce(many)
+    render(<PublicArticleList />)
+    expect(await screen.findByRole('heading', { level: 2, name: 'Artikel 1' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(9)
+    await userEvent.click(screen.getByRole('button', { name: 'Muat lebih banyak' }))
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(12)
+    expect(screen.queryByRole('button', { name: 'Muat lebih banyak' })).not.toBeInTheDocument()
+  })
+
   it('menampilkan pesan kosong', async () => {
     fetchPublicPosts.mockResolvedValueOnce([])
     render(<PublicArticleList />)

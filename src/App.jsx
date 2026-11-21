@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import Link from './components/Link'
 import useTheme from './hooks/useTheme'
 import usePageMeta from './hooks/usePageMeta'
 import { getRedirect, homeFor, matchRoute, navigate } from './helpers/router'
 import { clearSession, getToken, getUser, saveSession } from './helpers/sessionHelper'
-import AdminDashboard from './features/admin/components/AdminDashboard'
 import { logout } from './features/auth/api/authApi'
-import AuthPage from './features/auth/components/AuthPage'
-import AuthorDashboard from './features/blog/components/AuthorDashboard'
 import PublicArticleDetail from './features/blog/components/PublicArticleDetail'
 import PublicArticleList from './features/blog/components/PublicArticleList'
 import StickyNavbar from './features/blog/components/StickyNavbar'
+
+const AdminDashboard = lazy(() => import('./features/admin/components/AdminDashboard'))
+const AuthPage = lazy(() => import('./features/auth/components/AuthPage'))
+const AuthorDashboard = lazy(() => import('./features/blog/components/AuthorDashboard'))
 
 function NotFound() {
   usePageMeta('Halaman tidak ditemukan | Delcom Blog', 'Halaman yang Anda cari tidak ditemukan di Delcom Blog.')
@@ -86,7 +87,7 @@ export default function App() {
       </a>
       <StickyNavbar user={user} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
       <main id="main-content" className="flex-1">
-        {page}
+        <Suspense fallback={<p role="status" className="px-4 py-8">Memuat halaman…</p>}>{page}</Suspense>
       </main>
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
         © 2026 Delcom Blog
